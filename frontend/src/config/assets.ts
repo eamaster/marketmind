@@ -1,4 +1,4 @@
-import type { AssetType, OilCode, MetalSymbol, StockSymbol, Timeframe } from '../services/types';
+import type { OilCode, MetalSymbol, StockSymbol, Timeframe } from '../services/types';
 
 // ===========================
 // Supported Assets Configuration

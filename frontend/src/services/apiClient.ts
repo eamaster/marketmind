@@ -7,13 +7,18 @@ const API_BASE_URL = import.meta.env.DEV
     : 'https://marketmind-worker.smah0085.workers.dev/api';
 
 class ApiError extends Error {
+    status: number;
+    statusText: string;
+
     constructor(
         message: string,
-        public status: number,
-        public statusText: string
+        status: number,
+        statusText: string
     ) {
         super(message);
         this.name = 'ApiError';
+        this.status = status;
+        this.statusText = statusText;
     }
 }
 

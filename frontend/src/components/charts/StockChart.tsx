@@ -11,7 +11,7 @@ interface StockChartProps {
     onRetry?: () => void;
 }
 
-export function StockChart({ data, timeframe, isLoading, error, onRetry }: StockChartProps) {
+export function StockChart({ data, timeframe: _timeframe, isLoading, error, onRetry }: StockChartProps) {
     if (isLoading) return <LoadingState />;
     if (error) return <ErrorState error={error} onRetry={onRetry} />;
     if (!data || data.length === 0) {
