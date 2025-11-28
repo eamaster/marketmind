@@ -1,6 +1,10 @@
 // Thin fetch wrapper for calling Worker API endpoints
 
-const API_BASE_URL = '/api'; // Always use /api - Vite proxy in dev, same-origin in prod
+// In development: use Vite proxy (/api -> localhost:8787)
+// In production (GitHub Pages): use deployed Cloudflare Worker
+const API_BASE_URL = import.meta.env.DEV
+    ? '/api'
+    : 'https://marketmind-worker.smah0085.workers.dev/api';
 
 class ApiError extends Error {
     constructor(

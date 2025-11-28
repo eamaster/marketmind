@@ -17,7 +17,7 @@ export async function getNews(
     }
 
     try {
-        const url = buildNewsUrl(assetType, symbol, apiToken);
+        const url = buildNewsUrl(assetType, symbol, timeframe, apiToken);
         console.log(`[Marketaux] Fetching news for ${assetType} ${symbol || ''} (${timeframe})`);
         console.log(`[Marketaux] URL: ${url.toString().replace(apiToken, 'API_TOKEN')}`);
 
@@ -42,7 +42,7 @@ export async function getNews(
     }
 }
 
-function buildNewsUrl(assetType: AssetType, symbol: string | undefined, apiToken: string): URL {
+function buildNewsUrl(assetType: AssetType, symbol: string | undefined, timeframe: Timeframe, apiToken: string): URL {
     const url = new URL('https://api.marketaux.com/v1/news/all');
 
     url.searchParams.set('api_token', apiToken);
@@ -51,6 +51,37 @@ function buildNewsUrl(assetType: AssetType, symbol: string | undefined, apiToken
     url.searchParams.set('must_have_entities', 'true');
     url.searchParams.set('filter_entities', 'true');
     url.searchParams.set('group_similar', 'true');
+
+    // Sort by most recent first
+    url.searchParams.set('sort', 'published_at');
+    url.searchParams.set('sort_order', 'desc');
+
+    // Add date filter based on timeframe to get recent news only
+    const now = new Date();
+    let publishedAfter: Date;
+
+    switch (timeframe) {
+        case '1D':
+            // Get news from last 3 days for daily view
+            publishedAfter = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+            break;
+        case '1W':
+            // Get news from last week
+            publishedAfter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+        case '1M':
+            // Get news from last 30 days
+            publishedAfter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+        default:
+            publishedAfter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    }
+
+    // Format date as YYYY-MM-DD (API accepts this format)
+    const dateStr = publishedAfter.toISOString().split('T')[0];
+    url.searchParams.set('published_after', dateStr);
+
+    console.log(`[Marketaux] Filtering news published after: ${dateStr}`);
 
     // Build query based on asset type
     if (assetType === 'stock' && symbol) {
