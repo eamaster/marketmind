@@ -6,9 +6,10 @@ interface QuestionInputProps {
 }
 
 const SUGGESTED_QUESTIONS = [
-    'Why is the price volatile today?',
-    'What are the key factors affecting this asset?',
-    'Should I be concerned about recent news?',
+    'What is the current market trend and sentiment?',
+    'What are the key price levels to watch?',
+    'Is this a good entry or exit point?',
+    'How does recent news impact the price outlook?',
 ];
 
 export function QuestionInput({ onSubmit, isLoading }: QuestionInputProps) {
