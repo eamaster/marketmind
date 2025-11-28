@@ -12,23 +12,32 @@ export async function getNews(
     const apiToken = env.MARKETAUX_API_TOKEN;
 
     if (!apiToken) {
-        console.warn('MARKETAUX_API_TOKEN not configured, returning mock data');
+        console.warn('[Marketaux] No API token configured, using mock data');
         return getMockNews(assetType, symbol);
     }
 
     try {
         const url = buildNewsUrl(assetType, symbol, apiToken);
+        console.log(`[Marketaux] Fetching news for ${assetType} ${symbol || ''} (${timeframe})`);
+        console.log(`[Marketaux] URL: ${url.toString().replace(apiToken, 'API_TOKEN')}`);
 
         const response = await fetch(url.toString());
+        console.log(`[Marketaux] Response status: ${response.status}`);
 
         if (!response.ok) {
-            throw new Error(`Marketaux API error: ${response.statusText}`);
+            const errorText = await response.text();
+            console.error('[Marketaux] API error:', response.status, response.statusText, errorText);
+            throw new Error(`Marketaux API error: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
-        return normalizeNewsData(data);
+        console.log(`[Marketaux] Received ${data?.data?.length || 0} articles`);
+        const normalized = normalizeNewsData(data);
+        console.log(`[Marketaux] Normalized ${normalized.articles.length} articles, sentiment: ${normalized.sentiment.label}`);
+        return normalized;
     } catch (error) {
-        console.error('Marketaux API error:', error);
+        console.error('[Marketaux] Error fetching data:', error);
+        console.warn('[Marketaux] Falling back to mock data');
         return getMockNews(assetType, symbol);
     }
 }
@@ -58,6 +67,7 @@ function buildNewsUrl(assetType: AssetType, symbol: string | undefined, apiToken
 
 function normalizeNewsData(apiData: any): { articles: NewsArticle[]; sentiment: SentimentSummary } {
     if (!apiData?.data || !Array.isArray(apiData.data)) {
+        console.warn('[Marketaux] Invalid data structure in API response');
         return { articles: [], sentiment: { score: null, label: 'neutral' } };
     }
 
@@ -101,6 +111,8 @@ function calculateSentiment(articles: NewsArticle[]): SentimentSummary {
 }
 
 function getMockNews(assetType: AssetType, symbol?: string): { articles: NewsArticle[]; sentiment: SentimentSummary } {
+    console.log(`[Marketaux] Generating mock news for ${assetType} ${symbol || ''}`);
+
     const mockArticles: NewsArticle[] = [
         {
             id: '1',

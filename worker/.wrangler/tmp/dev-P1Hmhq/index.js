@@ -9,14 +9,14 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// .wrangler/tmp/bundle-PgNnbi/strip-cf-connecting-ip-header.js
+// .wrangler/tmp/bundle-rPuPWi/strip-cf-connecting-ip-header.js
 function stripCfConnectingIPHeader(input, init) {
   const request = new Request(input, init);
   request.headers.delete("CF-Connecting-IP");
   return request;
 }
 var init_strip_cf_connecting_ip_header = __esm({
-  ".wrangler/tmp/bundle-PgNnbi/strip-cf-connecting-ip-header.js"() {
+  ".wrangler/tmp/bundle-rPuPWi/strip-cf-connecting-ip-header.js"() {
     "use strict";
     __name(stripCfConnectingIPHeader, "stripCfConnectingIPHeader");
     globalThis.fetch = new Proxy(globalThis.fetch, {
@@ -48,38 +48,83 @@ var init_modules_watch_stub = __esm({
 async function getOilPrice(code, timeframe, env) {
   const apiKey = env.OILPRICE_API_KEY;
   if (!apiKey) {
-    console.warn("OILPRICE_API_KEY not configured, returning mock data");
+    console.warn("[OilPrice] No API key configured, using mock data");
     return getMockOilData(code, timeframe);
   }
   try {
-    const response = await fetch(`https://api.oilpriceapi.com/v1/prices/latest`, {
+    const endpoint = getEndpointForTimeframe(timeframe);
+    const url = `https://api.oilpriceapi.com/v1${endpoint}?by_code=${code}`;
+    console.log(`[OilPrice] Fetching ${code} for ${timeframe} from ${endpoint}`);
+    const response = await fetch(url, {
       headers: {
         "Authorization": `Token ${apiKey}`,
         "Content-Type": "application/json"
       }
     });
     if (!response.ok) {
-      throw new Error(`OilPriceAPI error: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error("[OilPrice] API error:", response.status, response.statusText, errorText);
+      throw new Error(`OilPriceAPI error: ${response.status} ${response.statusText}`);
     }
     const data = await response.json();
-    return normalizeOilPriceData(data, code);
+    console.log(`[OilPrice] Raw API response:`, JSON.stringify(data).substring(0, 500));
+    const normalizedData = normalizeOilPriceData(data, code, timeframe);
+    console.log(`[OilPrice] Normalized ${normalizedData.length} data points`);
+    return normalizedData;
   } catch (error) {
-    console.error("OilPrice API error:", error);
+    console.error("[OilPrice] Error fetching data:", error);
+    console.warn("[OilPrice] Falling back to mock data");
     return getMockOilData(code, timeframe);
   }
 }
-function normalizeOilPriceData(apiData, code) {
-  if (!apiData?.data) {
+function getEndpointForTimeframe(timeframe) {
+  switch (timeframe) {
+    case "1D":
+      return "/prices/past_day";
+    case "1W":
+      return "/prices/past_week";
+    case "1M":
+      return "/prices/past_month";
+    default:
+      return "/prices/latest";
+  }
+}
+function normalizeOilPriceData(apiData, code, timeframe) {
+  console.log(`[OilPrice] Normalizing data for ${code}, timeframe: ${timeframe}`);
+  if (!apiData?.status || apiData.status !== "success") {
+    console.warn("[OilPrice] API response not successful:", apiData);
     return [];
   }
-  const price = apiData.data.price || 75.5;
-  const now = (/* @__PURE__ */ new Date()).toISOString();
-  return [{
-    timestamp: now,
-    close: price
-  }];
+  if (!apiData?.data) {
+    console.warn("[OilPrice] No data in API response");
+    return [];
+  }
+  const codeData = apiData.data[code];
+  if (!codeData) {
+    console.warn(`[OilPrice] No data for code ${code} in response`);
+    console.log(`[OilPrice] Available codes:`, Object.keys(apiData.data));
+    return [];
+  }
+  if (Array.isArray(codeData)) {
+    console.log(`[OilPrice] Processing ${codeData.length} historical data points`);
+    return codeData.map((point) => ({
+      timestamp: point.timestamp || (/* @__PURE__ */ new Date()).toISOString(),
+      close: point.price || 0
+      // OilPrice API doesn't provide OHLC, only price
+    }));
+  }
+  if (typeof codeData === "object" && codeData.price) {
+    console.log("[OilPrice] Processing single latest price point");
+    return [{
+      timestamp: codeData.timestamp || (/* @__PURE__ */ new Date()).toISOString(),
+      close: codeData.price
+    }];
+  }
+  console.warn("[OilPrice] Unexpected data format:", typeof codeData);
+  return [];
 }
 function getMockOilData(code, timeframe) {
+  console.log(`[OilPrice] Generating ${timeframe} mock data for ${code}`);
   const basePrice = code === "WTI_USD" ? 75.5 : 78.2;
   const points = timeframe === "1D" ? 78 : timeframe === "1W" ? 168 : 30;
   const interval = timeframe === "1D" ? 5 * 60 * 1e3 : timeframe === "1W" ? 60 * 60 * 1e3 : 24 * 60 * 60 * 1e3;
@@ -106,6 +151,7 @@ var init_oilprice = __esm({
     init_strip_cf_connecting_ip_header();
     init_modules_watch_stub();
     __name(getOilPrice, "getOilPrice");
+    __name(getEndpointForTimeframe, "getEndpointForTimeframe");
     __name(normalizeOilPriceData, "normalizeOilPriceData");
     __name(getMockOilData, "getMockOilData");
   }
@@ -166,30 +212,40 @@ var init_oil = __esm({
 async function getGoldPrice(symbol, timeframe, env) {
   const apiKey = env.GOLD_API_KEY;
   if (!apiKey) {
-    console.warn("GOLD_API_KEY not configured, returning mock data");
+    console.warn("[GoldAPI] No API key configured, using mock data");
     return getMockGoldData(symbol, timeframe);
   }
   try {
     const pairSymbol = `${symbol}/USD`;
-    const response = await fetch(`https://www.goldapi.io/api/${pairSymbol}`, {
+    const url = `https://www.goldapi.io/api/${pairSymbol}`;
+    console.log(`[GoldAPI] Fetching ${pairSymbol} for ${timeframe}`);
+    const response = await fetch(url, {
       headers: {
         "x-access-token": apiKey
       }
     });
     if (!response.ok) {
-      throw new Error(`Gold API error: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error("[GoldAPI] API error:", response.status, response.statusText, errorText);
+      throw new Error(`Gold API error: ${response.status} ${response.statusText}`);
     }
     const data = await response.json();
-    return normalizeGoldPriceData(data);
+    console.log(`[GoldAPI] Raw API response:`, JSON.stringify(data).substring(0, 300));
+    const normalized = normalizeGoldPriceData(data);
+    console.log(`[GoldAPI] Normalized ${normalized.length} data points`);
+    return normalized;
   } catch (error) {
-    console.error("Gold API error:", error);
+    console.error("[GoldAPI] Error fetching data:", error);
+    console.warn("[GoldAPI] Falling back to mock data");
     return getMockGoldData(symbol, timeframe);
   }
 }
 function normalizeGoldPriceData(apiData) {
   if (!apiData?.price) {
+    console.warn("[GoldAPI] No price in API response");
     return [];
   }
+  console.log(`[GoldAPI] Price: ${apiData.price}, Timestamp: ${apiData.timestamp}`);
   return [{
     timestamp: new Date((apiData.timestamp || Date.now()) * 1e3).toISOString(),
     close: apiData.price,
@@ -199,6 +255,7 @@ function normalizeGoldPriceData(apiData) {
   }];
 }
 function getMockGoldData(symbol, timeframe) {
+  console.log(`[GoldAPI] Generating ${timeframe} mock data for ${symbol}`);
   const basePrice = symbol === "XAU" ? 2050 : 23.5;
   const points = timeframe === "1D" ? 78 : timeframe === "1W" ? 168 : 30;
   const interval = timeframe === "1D" ? 5 * 60 * 1e3 : timeframe === "1W" ? 60 * 60 * 1e3 : 24 * 60 * 60 * 1e3;
@@ -285,7 +342,7 @@ var init_gold = __esm({
 async function getStockCandles(symbol, timeframe, env) {
   const apiKey = env.FINNHUB_API_KEY;
   if (!apiKey) {
-    console.warn("FINNHUB_API_KEY not configured, returning mock data");
+    console.warn("[Finnhub] No API key configured, using mock data");
     return getMockStockData(symbol, timeframe);
   }
   try {
@@ -296,14 +353,23 @@ async function getStockCandles(symbol, timeframe, env) {
     url.searchParams.set("from", from.toString());
     url.searchParams.set("to", to.toString());
     url.searchParams.set("token", apiKey);
+    console.log(`[Finnhub] Fetching ${symbol} candles: ${timeframe} (resolution: ${resolution})`);
+    console.log(`[Finnhub] URL: ${url.toString().replace(apiKey, "API_KEY")}`);
     const response = await fetch(url.toString());
     if (!response.ok) {
-      throw new Error(`Finnhub API error: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error("[Finnhub] API error:", response.status, response.statusText, errorText);
+      throw new Error(`Finnhub API error: ${response.status} ${response.statusText}`);
     }
     const data = await response.json();
-    return normalizeStockData(data);
+    console.log(`[Finnhub] Raw API response status:`, data.s);
+    console.log(`[Finnhub] Data points count:`, data.t?.length || 0);
+    const normalizedData = normalizeStockData(data);
+    console.log(`[Finnhub] Normalized ${normalizedData.length} candles`);
+    return normalizedData;
   } catch (error) {
-    console.error("Finnhub API error:", error);
+    console.error("[Finnhub] Error fetching data:", error);
+    console.warn("[Finnhub] Falling back to mock data");
     return getMockStockData(symbol, timeframe);
   }
 }
@@ -334,9 +400,15 @@ function getTimeframeParams(timeframe) {
   }
 }
 function normalizeStockData(apiData) {
-  if (apiData.s !== "ok" || !apiData.t || apiData.t.length === 0) {
+  if (apiData.s !== "ok") {
+    console.warn("[Finnhub] API response status not OK:", apiData.s);
     return [];
   }
+  if (!apiData.t || apiData.t.length === 0) {
+    console.warn("[Finnhub] No timestamp data in response");
+    return [];
+  }
+  console.log(`[Finnhub] Processing ${apiData.t.length} candles`);
   const data = [];
   for (let i = 0; i < apiData.t.length; i++) {
     data.push({
@@ -351,6 +423,7 @@ function normalizeStockData(apiData) {
   return data;
 }
 function getMockStockData(symbol, timeframe) {
+  console.log(`[Finnhub] Generating ${timeframe} mock data for ${symbol}`);
   const basePrice = symbol === "AAPL" ? 180 : symbol === "TSLA" ? 240 : 450;
   const points = timeframe === "1D" ? 78 : timeframe === "1W" ? 168 : 30;
   const interval = timeframe === "1D" ? 5 * 60 * 1e3 : timeframe === "1W" ? 60 * 60 * 1e3 : 24 * 60 * 60 * 1e3;
@@ -482,19 +555,28 @@ var init_cache = __esm({
 async function getNews(assetType, symbol, timeframe, env) {
   const apiToken = env.MARKETAUX_API_TOKEN;
   if (!apiToken) {
-    console.warn("MARKETAUX_API_TOKEN not configured, returning mock data");
+    console.warn("[Marketaux] No API token configured, using mock data");
     return getMockNews(assetType, symbol);
   }
   try {
     const url = buildNewsUrl(assetType, symbol, apiToken);
+    console.log(`[Marketaux] Fetching news for ${assetType} ${symbol || ""} (${timeframe})`);
+    console.log(`[Marketaux] URL: ${url.toString().replace(apiToken, "API_TOKEN")}`);
     const response = await fetch(url.toString());
+    console.log(`[Marketaux] Response status: ${response.status}`);
     if (!response.ok) {
-      throw new Error(`Marketaux API error: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error("[Marketaux] API error:", response.status, response.statusText, errorText);
+      throw new Error(`Marketaux API error: ${response.status} ${response.statusText}`);
     }
     const data = await response.json();
-    return normalizeNewsData(data);
+    console.log(`[Marketaux] Received ${data?.data?.length || 0} articles`);
+    const normalized = normalizeNewsData(data);
+    console.log(`[Marketaux] Normalized ${normalized.articles.length} articles, sentiment: ${normalized.sentiment.label}`);
+    return normalized;
   } catch (error) {
-    console.error("Marketaux API error:", error);
+    console.error("[Marketaux] Error fetching data:", error);
+    console.warn("[Marketaux] Falling back to mock data");
     return getMockNews(assetType, symbol);
   }
 }
@@ -518,6 +600,7 @@ function buildNewsUrl(assetType, symbol, apiToken) {
 }
 function normalizeNewsData(apiData) {
   if (!apiData?.data || !Array.isArray(apiData.data)) {
+    console.warn("[Marketaux] Invalid data structure in API response");
     return { articles: [], sentiment: { score: null, label: "neutral" } };
   }
   const articles = apiData.data.map((item) => ({
@@ -549,6 +632,7 @@ function calculateSentiment(articles) {
   return { score: Number(avgScore.toFixed(3)), label };
 }
 function getMockNews(assetType, symbol) {
+  console.log(`[Marketaux] Generating mock news for ${assetType} ${symbol || ""}`);
   const mockArticles = [
     {
       id: "1",
@@ -878,11 +962,11 @@ var init_aiAnalyze = __esm({
   }
 });
 
-// .wrangler/tmp/bundle-PgNnbi/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-rPuPWi/middleware-loader.entry.ts
 init_strip_cf_connecting_ip_header();
 init_modules_watch_stub();
 
-// .wrangler/tmp/bundle-PgNnbi/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-rPuPWi/middleware-insertion-facade.js
 init_strip_cf_connecting_ip_header();
 init_modules_watch_stub();
 
@@ -999,7 +1083,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-PgNnbi/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-rPuPWi/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -1033,7 +1117,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-PgNnbi/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-rPuPWi/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

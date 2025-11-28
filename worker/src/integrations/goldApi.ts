@@ -11,7 +11,7 @@ export async function getGoldPrice(
     const apiKey = env.GOLD_API_KEY;
 
     if (!apiKey) {
-        console.warn('GOLD_API_KEY not configured, returning mock data');
+        console.warn('[GoldAPI] No API key configured, using mock data');
         return getMockGoldData(symbol, timeframe);
     }
 
@@ -19,20 +19,32 @@ export async function getGoldPrice(
         // Fetch current price for the symbol
         // Gold API uses symbols like XAU/USD, XAG/USD
         const pairSymbol = `${symbol}/USD`;
-        const response = await fetch(`https://www.goldapi.io/api/${pairSymbol}`, {
+        const url = `https://www.goldapi.io/api/${pairSymbol}`;
+
+        console.log(`[GoldAPI] Fetching ${pairSymbol} for ${timeframe}`);
+
+        const response = await fetch(url, {
             headers: {
                 'x-access-token': apiKey,
             },
         });
 
         if (!response.ok) {
-            throw new Error(`Gold API error: ${response.statusText}`);
+            const errorText = await response.text();
+            console.error('[GoldAPI] API error:', response.status, response.statusText, errorText);
+            throw new Error(`Gold API error: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
-        return normalizeGoldPriceData(data);
+        console.log(`[GoldAPI] Raw API response:`, JSON.stringify(data).substring(0, 300));
+
+        const normalized = normalizeGoldPriceData(data);
+        console.log(`[GoldAPI] Normalized ${normalized.length} data points`);
+
+        return normalized;
     } catch (error) {
-        console.error('Gold API error:', error);
+        console.error('[GoldAPI] Error fetching data:', error);
+        console.warn('[GoldAPI] Falling back to mock data');
         return getMockGoldData(symbol, timeframe);
     }
 }
@@ -40,8 +52,11 @@ export async function getGoldPrice(
 function normalizeGoldPriceData(apiData: any): PricePoint[] {
     // API response structure: { price: number, timestamp: number, ... }
     if (!apiData?.price) {
+        console.warn('[GoldAPI] No price in API response');
         return [];
     }
+
+    console.log(`[GoldAPI] Price: ${apiData.price}, Timestamp: ${apiData.timestamp}`);
 
     return [{
         timestamp: new Date((apiData.timestamp || Date.now()) * 1000).toISOString(),
@@ -53,6 +68,8 @@ function normalizeGoldPriceData(apiData: any): PricePoint[] {
 }
 
 function getMockGoldData(symbol: string, timeframe: Timeframe): PricePoint[] {
+    console.log(`[GoldAPI] Generating ${timeframe} mock data for ${symbol}`);
+
     const basePrice = symbol === 'XAU' ? 2050 : 23.5;
     const points = timeframe === '1D' ? 78 : timeframe === '1W' ? 168 : 30;
     const interval = timeframe === '1D' ? 5 * 60 * 1000 : timeframe === '1W' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;

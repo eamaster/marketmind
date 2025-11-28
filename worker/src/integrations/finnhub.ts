@@ -11,7 +11,7 @@ export async function getStockCandles(
     const apiKey = env.FINNHUB_API_KEY;
 
     if (!apiKey) {
-        console.warn('FINNHUB_API_KEY not configured, returning mock data');
+        console.warn('[Finnhub] No API key configured, using mock data');
         return getMockStockData(symbol, timeframe);
     }
 
@@ -25,16 +25,28 @@ export async function getStockCandles(
         url.searchParams.set('to', to.toString());
         url.searchParams.set('token', apiKey);
 
+        console.log(`[Finnhub] Fetching ${symbol} candles: ${timeframe} (resolution: ${resolution})`);
+        console.log(`[Finnhub] URL: ${url.toString().replace(apiKey, 'API_KEY')}`);
+
         const response = await fetch(url.toString());
 
         if (!response.ok) {
-            throw new Error(`Finnhub API error: ${response.statusText}`);
+            const errorText = await response.text();
+            console.error('[Finnhub] API error:', response.status, response.statusText, errorText);
+            throw new Error(`Finnhub API error: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
-        return normalizeStockData(data);
+        console.log(`[Finnhub] Raw API response status:`, data.s);
+        console.log(`[Finnhub] Data points count:`, data.t?.length || 0);
+
+        const normalizedData = normalizeStockData(data);
+        console.log(`[Finnhub] Normalized ${normalizedData.length} candles`);
+
+        return normalizedData;
     } catch (error) {
-        console.error('Finnhub API error:', error);
+        console.error('[Finnhub] Error fetching data:', error);
+        console.warn('[Finnhub] Falling back to mock data');
         return getMockStockData(symbol, timeframe);
     }
 }
@@ -66,11 +78,19 @@ function getTimeframeParams(timeframe: Timeframe): { resolution: string; from: n
 
 function normalizeStockData(apiData: any): PricePoint[] {
     // Finnhub returns: { c: [close], h: [high], l: [low], o: [open], t: [timestamp], v: [volume], s: status }
-    if (apiData.s !== 'ok' || !apiData.t || apiData.t.length === 0) {
+    if (apiData.s !== 'ok') {
+        console.warn('[Finnhub] API response status not OK:', apiData.s);
         return [];
     }
 
+    if (!apiData.t || apiData.t.length === 0) {
+        console.warn('[Finnhub] No timestamp data in response');
+        return [];
+    }
+
+    console.log(`[Finnhub] Processing ${apiData.t.length} candles`);
     const data: PricePoint[] = [];
+
     for (let i = 0; i < apiData.t.length; i++) {
         data.push({
             timestamp: new Date(apiData.t[i] * 1000).toISOString(),
@@ -86,6 +106,8 @@ function normalizeStockData(apiData: any): PricePoint[] {
 }
 
 function getMockStockData(symbol: string, timeframe: Timeframe): PricePoint[] {
+    console.log(`[Finnhub] Generating ${timeframe} mock data for ${symbol}`);
+
     const basePrice = symbol === 'AAPL' ? 180 : symbol === 'TSLA' ? 240 : 450;
     const points = timeframe === '1D' ? 78 : timeframe === '1W' ? 168 : 30;
     const interval = timeframe === '1D' ? 5 * 60 * 1000 : timeframe === '1W' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
