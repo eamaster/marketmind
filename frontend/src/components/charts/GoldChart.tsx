@@ -26,6 +26,7 @@ interface GoldChartProps {
     onTimeframeChange?: (tf: Timeframe) => void;
     onSymbolChange?: (symbol: string) => void;
     availableSymbols?: Array<{ value: string; label: string }>;
+    onUseForAI?: () => void;
 }
 
 // Default metal symbols
@@ -96,6 +97,7 @@ export function GoldChart({
     onTimeframeChange,
     onSymbolChange,
     availableSymbols,
+    onUseForAI,
 }: GoldChartProps) {
     if (isLoading) {
         return (
@@ -175,6 +177,17 @@ export function GoldChart({
                     {/* Timeframe Selector */}
                     {onTimeframeChange && (
                         <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
+                    )}
+
+                    {/* Use for AI Button */}
+                    {onUseForAI && (
+                        <button
+                            onClick={onUseForAI}
+                            className="px-3 py-1 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+                            aria-label="Use chart data for AI analysis"
+                        >
+                            Use for AI
+                        </button>
                     )}
                 </div>
             </div>

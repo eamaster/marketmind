@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StockChart } from '../components/charts/StockChart';
 import { OilChart } from '../components/charts/OilChart';
 import { GoldChart } from '../components/charts/GoldChart';
@@ -8,13 +8,21 @@ import { CacheTimestamp } from '../components/shared/CacheTimestamp';
 import { BottomPerformance } from '../components/layout/BottomPerformance';
 import { useAssetData } from '../hooks/useAssetData';
 import { useNews } from '../hooks/useNews';
-import type { Timeframe, StockSymbol, OilCode, MetalSymbol } from '../services/types';
+import type { Timeframe, StockSymbol, OilCode, MetalSymbol, PricePoint, NewsArticle } from '../services/types';
 
 interface DashboardPageProps {
     activeAsset?: 'stock' | 'oil' | 'metal';
+    onUseForAI?: () => void;
+    onContextUpdate?: (context: {
+        assetType: 'stock' | 'oil' | 'metal';
+        symbol: string;
+        timeframe: Timeframe;
+        chartData: PricePoint[];
+        news: NewsArticle[];
+    }) => void;
 }
 
-export function DashboardPage({ activeAsset = 'stock' }: DashboardPageProps) {
+export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpdate }: DashboardPageProps) {
     // Symbol to company name mapping
     const stockNameMap: Record<StockSymbol, string> = {
         'AAPL': 'Apple Inc.',
@@ -75,6 +83,46 @@ export function DashboardPage({ activeAsset = 'stock' }: DashboardPageProps) {
         timeframe: metalTimeframe,
     });
 
+    // Sync context to parent for AI Analyst
+    useEffect(() => {
+        if (!onContextUpdate) return;
+
+        if (activeAsset === 'stock') {
+            onContextUpdate({
+                assetType: 'stock',
+                symbol: stockSymbol,
+                timeframe: stockTimeframe,
+                chartData: stockData.data || [],
+                news: stockNews.articles || [],
+            });
+        } else if (activeAsset === 'oil') {
+            onContextUpdate({
+                assetType: 'oil',
+                symbol: oilCode,
+                timeframe: oilTimeframe,
+                chartData: oilData.data || [],
+                news: oilNews.articles || [],
+            });
+        } else if (activeAsset === 'metal') {
+            onContextUpdate({
+                assetType: 'metal',
+                symbol: metalSymbol,
+                timeframe: metalTimeframe,
+                chartData: metalData.data || [],
+                news: metalNews.articles || [],
+            });
+        }
+    }, [
+        activeAsset,
+        onContextUpdate,
+        // Stock deps
+        stockSymbol, stockTimeframe, stockData.data, stockNews.articles,
+        // Oil deps
+        oilCode, oilTimeframe, oilData.data, oilNews.articles,
+        // Metal deps
+        metalSymbol, metalTimeframe, metalData.data, metalNews.articles
+    ]);
+
     return (
         <div className="space-y-6">
             {/* Chart Section - Show only the selected asset chart */}
@@ -93,6 +141,7 @@ export function DashboardPage({ activeAsset = 'stock' }: DashboardPageProps) {
                                     error={stockData.error}
                                     onTimeframeChange={setStockTimeframe}
                                     onSymbolChange={(newSymbol) => setStockSymbol(newSymbol as any)}
+                                    onUseForAI={onUseForAI}
                                 />
                                 <div className="mt-3 pt-3 border-t border-slate-700">
                                     <CacheTimestamp
@@ -120,6 +169,7 @@ export function DashboardPage({ activeAsset = 'stock' }: DashboardPageProps) {
                                     error={oilData.error}
                                     onTimeframeChange={setOilTimeframe}
                                     onCodeChange={(newCode) => setOilCode(newCode as any)}
+                                    onUseForAI={onUseForAI}
                                 />
                                 <div className="mt-3 pt-3 border-t border-slate-700">
                                     <CacheTimestamp
@@ -147,6 +197,7 @@ export function DashboardPage({ activeAsset = 'stock' }: DashboardPageProps) {
                                     error={metalData.error}
                                     onTimeframeChange={setMetalTimeframe}
                                     onSymbolChange={(newSymbol) => setMetalSymbol(newSymbol as any)}
+                                    onUseForAI={onUseForAI}
                                 />
                                 <div className="mt-3 pt-3 border-t border-slate-700">
                                     <CacheTimestamp

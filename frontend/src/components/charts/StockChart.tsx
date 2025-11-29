@@ -15,6 +15,7 @@ interface StockChartProps {
     onTimeframeChange?: (tf: Timeframe) => void;
     onSymbolChange?: (symbol: string) => void;
     availableSymbols?: Array<{ value: string; label: string }>;
+    onUseForAI?: () => void;
 }
 
 // Default stock symbols
@@ -75,6 +76,7 @@ export function StockChart({
     onTimeframeChange,
     onSymbolChange,
     availableSymbols,
+    onUseForAI,
 }: StockChartProps) {
     if (isLoading) {
         return (
@@ -158,6 +160,17 @@ export function StockChart({
                     {/* Timeframe Selector */}
                     {onTimeframeChange && (
                         <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
+                    )}
+
+                    {/* Use for AI Button */}
+                    {onUseForAI && (
+                        <button
+                            onClick={onUseForAI}
+                            className="px-3 py-1 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+                            aria-label="Use chart data for AI analysis"
+                        >
+                            Use for AI
+                        </button>
                     )}
                 </div>
             </div>

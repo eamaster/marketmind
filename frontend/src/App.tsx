@@ -27,18 +27,22 @@ function AppContent() {
   // Fetch news for news ticker
   const stockNews = useNews({ assetType: 'stock', symbol: 'AAPL', timeframe: '1D' });
 
-  // Get current context for AI
-  const getCurrentContext = () => {
-    return {
-      assetType: activeAsset,
-      symbol: activeAsset === 'stock' ? 'AAPL' : activeAsset === 'oil' ? 'WTI_USD' : 'XAU',
-      timeframe: '1D' as Timeframe,
-      chartData: [],
-      news: stockNews.articles,
-    };
-  };
+  // AI Context State
+  const [aiContext, setAiContext] = useState<{
+    assetType: 'stock' | 'oil' | 'metal';
+    symbol: string;
+    timeframe: Timeframe;
+    chartData: any[];
+    news: any[];
+  }>({
+    assetType: 'stock',
+    symbol: 'AAPL',
+    timeframe: '1D',
+    chartData: [],
+    news: [],
+  });
 
-  const aiAnalyst = useAiAnalyst(getCurrentContext());
+  const aiAnalyst = useAiAnalyst(aiContext);
 
   const handleSymbolClick = (symbol: string) => {
     console.log('Symbol clicked:', symbol);
@@ -55,7 +59,11 @@ function AppContent() {
           />
         }
       >
-        <DashboardPage activeAsset={activeAsset} />
+        <DashboardPage
+          activeAsset={activeAsset}
+          onContextUpdate={setAiContext}
+          onUseForAI={() => setIsChatOpen(true)}
+        />
       </MainLayout>
 
       {/* News Ticker - Fixed bottom */}
@@ -101,9 +109,9 @@ function AppContent() {
                 onSendQuestion={aiAnalyst.sendQuestion}
                 isLoading={aiAnalyst.isLoading}
                 currentContext={{
-                  assetType: activeAsset,
-                  symbol: activeAsset === 'stock' ? 'AAPL' : activeAsset === 'oil' ? 'WTI_USD' : 'XAU',
-                  timeframe: '1D',
+                  assetType: aiContext.assetType,
+                  symbol: aiContext.symbol,
+                  timeframe: aiContext.timeframe,
                 }}
               />
             </div>
