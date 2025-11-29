@@ -122,17 +122,19 @@ export function GoldChart({
     }
 
     const chartData = data.map((point, index) => {
+        const openPrice = point.open || 0;
+        const closePrice = point.close || 0;
         const color = index === 0
-            ? (point.close >= point.open ? '#10b981' : '#ef4444')
-            : (point.close >= data[index - 1].close ? '#10b981' : '#ef4444');
+            ? (closePrice >= openPrice ? '#10b981' : '#ef4444')
+            : (closePrice >= (data[index - 1].close || 0) ? '#10b981' : '#ef4444');
 
         return {
             time: new Date(point.timestamp).toLocaleTimeString([], {
                 hour: '2-digit',
                 minute: '2-digit',
             }),
-            close: point.close,
-            open: point.open,
+            close: closePrice,
+            open: openPrice,
             high: point.high,
             low: point.low,
             volume: point.volume || 0,
