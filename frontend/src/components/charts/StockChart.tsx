@@ -1,4 +1,14 @@
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
+import {
+    Area,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ReferenceLine,
+    ResponsiveContainer,
+    ComposedChart,
+} from 'recharts';
 import { TrendingUp, Star, Maximize2, Share2 } from 'lucide-react';
 import { PriceAnimated } from '../shared/PriceAnimated';
 import { TimeframeSelector } from '../shared/TimeframeSelector';
@@ -17,6 +27,7 @@ interface StockChartProps {
     onSymbolChange?: (symbol: string) => void;
     availableSymbols?: Array<{ value: string; label: string }>;
     onUseForAI?: () => void;
+    currentPrice?: number; // Optional override for header price
 }
 
 // Default stock symbols
@@ -38,7 +49,7 @@ function formatVolume(volume: number): string {
     return volume.toString();
 }
 
-// Helper: Calculate support/resistance from chart data (USER MOD #8)
+// Helper: Calculate support/resistance from chart data
 function calculateSupportResistance(data: PricePoint[]): { support: number; resistance: number } {
     if (!data || data.length < 20) {
         const currentPrice = data?.[data.length - 1]?.close || 0;
@@ -78,6 +89,7 @@ export function StockChart({
     onSymbolChange,
     availableSymbols,
     onUseForAI,
+    currentPrice: overridePrice,
 }: StockChartProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -112,7 +124,8 @@ export function StockChart({
     }));
 
     // Calculate stats
-    const currentPrice = data[data.length - 1]?.close || 0;
+    const lastClose = data[data.length - 1]?.close || 0;
+    const currentPrice = overridePrice || lastClose;
     const previousPrice = data[0]?.close || currentPrice;
     const priceChange = ((currentPrice - previousPrice) / previousPrice) * 100;
     const priceChangeAbsolute = currentPrice - previousPrice;
@@ -205,9 +218,9 @@ export function StockChart({
                 </div>
             </div>
 
-            {/* CHART AREA WITH GRADIENT */}
-            <ResponsiveContainer width="100%" height={256}>
-                <AreaChart data={chartData}>
+            {/* COMPOSED CHART AREA (Price + Volume) */}
+            <ResponsiveContainer width="100%" height={320}>
+                <ComposedChart data={chartData}>
                     <defs>
                         <linearGradient id="bullGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
@@ -220,21 +233,35 @@ export function StockChart({
                     </defs>
 
                     <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} opacity={0.3} />
+
                     <XAxis
                         dataKey="time"
                         stroke={isDark ? "#64748b" : "#94a3b8"}
                         tick={{ fontSize: 12, fill: isDark ? "#94a3b8" : "#64748b" }}
                         tickLine={false}
                     />
+
+                    {/* Price Y-Axis (Right) */}
                     <YAxis
+                        yAxisId="price"
+                        orientation="right"
                         stroke={isDark ? "#64748b" : "#94a3b8"}
                         tick={{ fontSize: 12, fill: isDark ? "#94a3b8" : "#64748b" }}
                         tickLine={false}
                         domain={['auto', 'auto']}
                     />
 
+                    {/* Volume Y-Axis (Left, hidden or scaled) */}
+                    <YAxis
+                        yAxisId="volume"
+                        orientation="left"
+                        hide={true}
+                        domain={[0, 'dataMax * 4']} // Push volume bars to bottom 1/4
+                    />
+
                     {/* Support/Resistance Lines */}
                     <ReferenceLine
+                        yAxisId="price"
                         y={support}
                         stroke="#f87171"
                         strokeDasharray="5 5"
@@ -246,6 +273,7 @@ export function StockChart({
                         }}
                     />
                     <ReferenceLine
+                        yAxisId="price"
                         y={resistance}
                         stroke="#34d399"
                         strokeDasharray="5 5"
@@ -270,7 +298,17 @@ export function StockChart({
                         itemStyle={{ color: isDark ? '#cbd5e1' : '#334155' }}
                     />
 
+                    {/* Volume Bars */}
+                    <Bar
+                        yAxisId="volume"
+                        dataKey="volume"
+                        fill={isBullish ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}
+                        barSize={4}
+                    />
+
+                    {/* Price Area */}
                     <Area
+                        yAxisId="price"
                         type="monotone"
                         dataKey="close"
                         stroke={isBullish ? '#34d399' : '#f87171'}
@@ -278,21 +316,7 @@ export function StockChart({
                         fill={isBullish ? 'url(#bullGradient)' : 'url(#bearGradient)'}
                         dot={false}
                     />
-                </AreaChart>
-            </ResponsiveContainer>
-
-            {/* VOLUME BARS */}
-            <ResponsiveContainer width="100%" height={64}>
-                <BarChart data={chartData}>
-                    <Bar
-                        dataKey="volume"
-                        fill={
-                            isBullish
-                                ? 'rgba(16, 185, 129, 0.6)'
-                                : 'rgba(239, 68, 68, 0.6)'
-                        }
-                    />
-                </BarChart>
+                </ComposedChart>
             </ResponsiveContainer>
 
             {/* SENTIMENT GAUGE */}

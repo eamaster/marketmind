@@ -75,10 +75,12 @@ function normalizeGoldPriceData(apiData: any): PricePoint[] {
     }];
 }
 
+import { MOCK_PRICES } from '../core/constants';
+
 function getMockGoldData(symbol: string, timeframe: Timeframe): PricePoint[] {
     console.log(`[GoldAPI] Generating ${timeframe} mock data for ${symbol}`);
 
-    const basePrice = symbol === 'XAU' ? 2050 : 23.5;
+    const basePrice = MOCK_PRICES[symbol] || 2050.00;
     const points = timeframe === '1D' ? 78 : timeframe === '1W' ? 168 : 30;
     const interval = timeframe === '1D' ? 5 * 60 * 1000 : timeframe === '1W' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
 
@@ -88,7 +90,7 @@ function getMockGoldData(symbol: string, timeframe: Timeframe): PricePoint[] {
     for (let i = 0; i < points; i++) {
         const timestamp = new Date(now - (points - i - 1) * interval).toISOString();
         const volatility = (Math.random() - 0.5) * (basePrice * 0.01);
-        const trend = i * 0.05;
+        const trend = i * (basePrice * 0.0005);
         const close = basePrice + volatility + trend;
 
         data.push({

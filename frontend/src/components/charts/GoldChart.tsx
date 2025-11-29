@@ -1,6 +1,5 @@
 import {
-    AreaChart,
-    BarChart,
+    Area,
     Bar,
     XAxis,
     YAxis,
@@ -8,7 +7,7 @@ import {
     Tooltip,
     ReferenceLine,
     ResponsiveContainer,
-    Area,
+    ComposedChart,
 } from 'recharts';
 import { TrendingUp, Star, Maximize2, Share2 } from 'lucide-react';
 import { PriceAnimated } from '../shared/PriceAnimated';
@@ -28,6 +27,7 @@ interface GoldChartProps {
     onSymbolChange?: (symbol: string) => void;
     availableSymbols?: Array<{ value: string; label: string }>;
     onUseForAI?: () => void;
+    currentPrice?: number; // Optional override for header price
 }
 
 // Default metal symbols
@@ -69,19 +69,19 @@ function getSentimentData(sentiment: 'bullish' | 'bearish' | 'neutral') {
         bullish: {
             label: 'Bullish',
             emoji: '🐂',
-            color: 'text-amber-400',
+            color: 'text-amber-500 dark:text-amber-400',
             score: 0.75,
         },
         bearish: {
             label: 'Bearish',
             emoji: '🐻',
-            color: 'text-red-400',
+            color: 'text-red-500 dark:text-red-400',
             score: 0.25,
         },
         neutral: {
             label: 'Neutral',
             emoji: '⚪',
-            color: 'text-amber-400',
+            color: 'text-amber-500 dark:text-amber-400',
             score: 0.5,
         },
     };
@@ -99,6 +99,7 @@ export function GoldChart({
     onSymbolChange,
     availableSymbols,
     onUseForAI,
+    currentPrice: overridePrice,
 }: GoldChartProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -131,7 +132,8 @@ export function GoldChart({
         volume: point.volume || 0,
     }));
 
-    const currentPrice = data[data.length - 1]?.close || 0;
+    const lastClose = data[data.length - 1]?.close || 0;
+    const currentPrice = overridePrice || lastClose;
     const previousPrice = data[0]?.close || currentPrice;
     const priceChange = ((currentPrice - previousPrice) / previousPrice) * 100;
     const priceChangeAbsolute = currentPrice - previousPrice;
@@ -221,9 +223,9 @@ export function GoldChart({
                 </div>
             </div>
 
-            {/* CHART AREA - GOLD/AMBER THEME */}
-            <ResponsiveContainer width="100%" height={256}>
-                <AreaChart data={chartData}>
+            {/* COMPOSED CHART AREA - GOLD/AMBER THEME */}
+            <ResponsiveContainer width="100%" height={320}>
+                <ComposedChart data={chartData}>
                     <defs>
                         <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
@@ -232,20 +234,34 @@ export function GoldChart({
                     </defs>
 
                     <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} opacity={0.3} />
+
                     <XAxis
                         dataKey="time"
                         stroke={isDark ? "#64748b" : "#94a3b8"}
                         tick={{ fontSize: 12, fill: isDark ? "#94a3b8" : "#64748b" }}
                         tickLine={false}
                     />
+
+                    {/* Price Y-Axis (Right) */}
                     <YAxis
+                        yAxisId="price"
+                        orientation="right"
                         stroke={isDark ? "#64748b" : "#94a3b8"}
                         tick={{ fontSize: 12, fill: isDark ? "#94a3b8" : "#64748b" }}
                         tickLine={false}
                         domain={['auto', 'auto']}
                     />
 
+                    {/* Volume Y-Axis (Left, hidden or scaled) */}
+                    <YAxis
+                        yAxisId="volume"
+                        orientation="left"
+                        hide={true}
+                        domain={[0, 'dataMax * 4']}
+                    />
+
                     <ReferenceLine
+                        yAxisId="price"
                         y={support}
                         stroke="#fbbf24"
                         strokeDasharray="5 5"
@@ -257,6 +273,7 @@ export function GoldChart({
                         }}
                     />
                     <ReferenceLine
+                        yAxisId="price"
                         y={resistance}
                         stroke="#f59e0b"
                         strokeDasharray="5 5"
@@ -281,7 +298,17 @@ export function GoldChart({
                         itemStyle={{ color: isDark ? '#cbd5e1' : '#334155' }}
                     />
 
+                    {/* Volume Bars */}
+                    <Bar
+                        yAxisId="volume"
+                        dataKey="volume"
+                        fill="rgba(245, 158, 11, 0.3)"
+                        barSize={4}
+                    />
+
+                    {/* Price Area */}
                     <Area
+                        yAxisId="price"
                         type="monotone"
                         dataKey="close"
                         stroke="#f59e0b"
@@ -289,14 +316,7 @@ export function GoldChart({
                         fill="url(#goldGradient)"
                         dot={false}
                     />
-                </AreaChart>
-            </ResponsiveContainer>
-
-            {/* VOLUME BARS */}
-            <ResponsiveContainer width="100%" height={64}>
-                <BarChart data={chartData}>
-                    <Bar dataKey="volume" fill="rgba(245, 158, 11, 0.6)" />
-                </BarChart>
+                </ComposedChart>
             </ResponsiveContainer>
 
             {/* SENTIMENT GAUGE */}

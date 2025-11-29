@@ -105,10 +105,12 @@ function normalizeStockData(apiData: any): PricePoint[] {
     return data;
 }
 
+import { MOCK_PRICES } from '../core/constants';
+
 function getMockStockData(symbol: string, timeframe: Timeframe): PricePoint[] {
     console.log(`[Finnhub] Generating ${timeframe} mock data for ${symbol}`);
 
-    const basePrice = symbol === 'AAPL' ? 180 : symbol === 'TSLA' ? 240 : 450;
+    const basePrice = MOCK_PRICES[symbol] || 150.00;
     const points = timeframe === '1D' ? 78 : timeframe === '1W' ? 168 : 30;
     const interval = timeframe === '1D' ? 5 * 60 * 1000 : timeframe === '1W' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
 
@@ -118,12 +120,12 @@ function getMockStockData(symbol: string, timeframe: Timeframe): PricePoint[] {
     for (let i = 0; i < points; i++) {
         const timestamp = new Date(now - (points - i - 1) * interval).toISOString();
         const volatility = (Math.random() - 0.5) * (basePrice * 0.02);
-        const trend = i * 0.1;
+        const trend = i * (basePrice * 0.0005); // Slight upward trend
         const close = basePrice + volatility + trend;
 
-        const open = close + (Math.random() - 0.5) * 2;
-        const high = Math.max(open, close) + Math.random() * 1.5;
-        const low = Math.min(open, close) - Math.random() * 1.5;
+        const open = close + (Math.random() - 0.5) * (basePrice * 0.01);
+        const high = Math.max(open, close) + Math.random() * (basePrice * 0.01);
+        const low = Math.min(open, close) - Math.random() * (basePrice * 0.01);
 
         data.push({
             timestamp,
@@ -131,7 +133,7 @@ function getMockStockData(symbol: string, timeframe: Timeframe): PricePoint[] {
             high: Number(high.toFixed(2)),
             low: Number(low.toFixed(2)),
             close: Number(close.toFixed(2)),
-            volume: Math.floor(Math.random() * 10000000),
+            volume: Math.floor(Math.random() * 1000000) + 500000,
         });
     }
 
@@ -174,10 +176,11 @@ export async function getStockQuote(
 }
 
 function getMockQuote(symbol: string): { price: number; change: number; changePercent: number } {
-    const basePrice = symbol === 'AAPL' ? 189.45 : symbol === 'TSLA' ? 242.84 : 150.00;
-    const volatility = (Math.random() - 0.5) * 2;
+    const basePrice = MOCK_PRICES[symbol] || 150.00;
+    // Add some random variation so it doesn't look static
+    const volatility = (Math.random() - 0.5) * (basePrice * 0.01);
     const price = basePrice + volatility;
-    const change = volatility;
+    const change = volatility + (Math.random() * 2); // Bias towards positive for demo
     const changePercent = (change / basePrice) * 100;
 
     return {

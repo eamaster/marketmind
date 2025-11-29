@@ -118,10 +118,12 @@ function normalizeOilPriceData(apiData: any, code: string, timeframe: Timeframe)
     return [];
 }
 
+import { MOCK_PRICES } from '../core/constants';
+
 function getMockOilData(code: string, timeframe: Timeframe): PricePoint[] {
     console.log(`[OilPrice] Generating ${timeframe} mock data for ${code}`);
 
-    const basePrice = code === 'WTI_USD' ? 75.5 : 78.2;
+    const basePrice = MOCK_PRICES[code] || 75.5;
     const points = timeframe === '1D' ? 78 : timeframe === '1W' ? 168 : 30;
     const interval = timeframe === '1D' ? 5 * 60 * 1000 : timeframe === '1W' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
 
@@ -130,8 +132,8 @@ function getMockOilData(code: string, timeframe: Timeframe): PricePoint[] {
 
     for (let i = 0; i < points; i++) {
         const timestamp = new Date(now - (points - i - 1) * interval).toISOString();
-        const volatility = (Math.random() - 0.5) * 2;
-        const trend = i * 0.01;
+        const volatility = (Math.random() - 0.5) * (basePrice * 0.02);
+        const trend = i * (basePrice * 0.0005);
         const close = basePrice + volatility + trend;
 
         data.push({
