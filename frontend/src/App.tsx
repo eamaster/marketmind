@@ -92,7 +92,7 @@ function AppContent() {
           />
 
           {/* Chat Panel */}
-          <div className="fixed right-0 top-0 bottom-0 w-full sm:w-96 bg-slate-900 shadow-2xl z-50 transform transition-transform duration-300 ease-out">
+          <div className="fixed right-0 top-[65px] bottom-0 w-full sm:w-96 bg-slate-900 shadow-2xl z-50 transform transition-transform duration-300 ease-out border-l border-slate-800">
             {/* Close Button */}
             <button
               onClick={() => setIsChatOpen(false)}
