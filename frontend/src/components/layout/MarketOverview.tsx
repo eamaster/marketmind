@@ -1,111 +1,68 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '../../services/apiClient';
 
-// Mock data generator for major indices
-function generateMockIndexData() {
-    // Base values
-    const baseValues = {
-        sp500: 4500,
-        nasdaq: 14100,
-        dow: 34900,
-    };
+// Use ETF proxies for indices as they are reliably available on free tier
+const INDICES = [
+    { name: 'S&P 500', symbol: 'SPY' },
+    { name: 'NASDAQ', symbol: 'QQQ' },
+    { name: 'DOW', symbol: 'DIA' },
+];
 
-    // Get stored data or create new
-    const stored = localStorage.getItem('mock_indices');
-    let lastUpdate: Date;
-    let currentValues: typeof baseValues;
+function IndexRow({ item }: { item: { name: string; symbol: string } }) {
+    const { data, isLoading, isError } = useQuery({
+        queryKey: ['quote', item.symbol],
+        queryFn: () => apiClient.getQuote(item.symbol),
+        refetchInterval: 60000,
+        staleTime: 30000,
+    });
 
-    if (stored) {
-        const parsed = JSON.parse(stored);
-        lastUpdate = new Date(parsed.lastUpdate);
-        currentValues = parsed.values;
-
-        // Update values every 5 minutes
-        const now = new Date();
-        if (now.getTime() - lastUpdate.getTime() > 5 * 60 * 1000) {
-            // Apply small random changes (±0.5%)
-            currentValues = {
-                sp500: currentValues.sp500 * (1 + (Math.random() - 0.5) * 0.01),
-                nasdaq: currentValues.nasdaq * (1 + (Math.random() - 0.5) * 0.01),
-                dow: currentValues.dow * (1 + (Math.random() - 0.5) * 0.01),
-            };
-            localStorage.setItem('mock_indices', JSON.stringify({
-                lastUpdate: now.toISOString(),
-                values: currentValues,
-            }));
-        }
-    } else {
-        currentValues = baseValues;
-        lastUpdate = new Date();
-        localStorage.setItem('mock_indices', JSON.stringify({
-            lastUpdate: lastUpdate.toISOString(),
-            values: currentValues,
-        }));
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-between py-2 animate-pulse">
+                <div className="h-4 w-16 bg-slate-200 dark:bg-slate-800 rounded"></div>
+                <div className="h-4 w-20 bg-slate-200 dark:bg-slate-800 rounded"></div>
+            </div>
+        );
     }
 
-    // Calculate changes from base
-    return [
-        {
-            name: 'S&P 500',
-            price: currentValues.sp500.toFixed(2),
-            change: ((currentValues.sp500 - baseValues.sp500) / baseValues.sp500 * 100).toFixed(2),
-            isPositive: currentValues.sp500 >= baseValues.sp500,
-        },
-        {
-            name: 'NASDAQ',
-            price: currentValues.nasdaq.toFixed(2),
-            change: ((currentValues.nasdaq - baseValues.nasdaq) / baseValues.nasdaq * 100).toFixed(2),
-            isPositive: currentValues.nasdaq >= baseValues.nasdaq,
-        },
-        {
-            name: 'DOW',
-            price: currentValues.dow.toFixed(2),
-            change: ((currentValues.dow - baseValues.dow) / baseValues.dow * 100).toFixed(2),
-            isPositive: currentValues.dow >= baseValues.dow,
-        },
-    ];
+    if (isError || !data) {
+        return null;
+    }
+
+    const isPositive = data.change >= 0;
+
+    return (
+        <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-slate-600 dark:text-slate-400">{item.name}</span>
+            <div className="flex items-center gap-2">
+                <span className="font-mono text-sm text-slate-700 dark:text-slate-300">
+                    {data.price.toFixed(2)}
+                </span>
+                <span
+                    className={`text-xs font-medium flex items-center gap-1 ${isPositive ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
+                        }`}
+                >
+                    <span className={isPositive ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}>
+                        •
+                    </span>
+                    {isPositive ? '+' : ''}{data.changePercent.toFixed(2)}%
+                </span>
+            </div>
+        </div>
+    );
 }
 
 export function MarketOverview() {
-    const [indices, setIndices] = useState(generateMockIndexData());
-
-    useEffect(() => {
-        // Refresh every minute
-        const interval = setInterval(() => {
-            setIndices(generateMockIndexData());
-        }, 60000);
-
-        return () => clearInterval(interval);
-    }, []);
-
     return (
         <div className="space-y-2">
             <div className="flex items-center justify-between px-3">
                 <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Market Overview
                 </h3>
-                <span className="text-xs text-slate-500" title="Simulated data updates every 5 minutes">
-                    Index data simulated
-                </span>
             </div>
             <div className="space-y-2 px-3">
-                {indices.map((index) => (
-                    <div key={index.name} className="flex items-center justify-between py-2">
-                        <span className="text-sm text-slate-400">{index.name}</span>
-                        <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm text-slate-300">
-                                {index.price}
-                            </span>
-                            <span
-                                className={`text-xs font-medium flex items-center gap-1 ${index.isPositive ? 'text-emerald-400' : 'text-red-400'
-                                    }`}
-                            >
-                                <span className={index.isPositive ? 'text-emerald-400' : 'text-red-400'}>
-                                    •
-                                </span>
-                                {index.isPositive ? '+' : ''}{index.change}%
-                            </span>
-                        </div>
-                    </div>
+                {INDICES.map((index) => (
+                    <IndexRow key={index.symbol} item={index} />
                 ))}
             </div>
         </div>

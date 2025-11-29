@@ -72,6 +72,11 @@ export const apiClient = {
         return fetchApi<any>(endpoint);
     },
 
+    // Fetch single quote
+    getQuote: (symbol: string) => {
+        return fetchApi<{ price: number; change: number; changePercent: number }>(`/quote?symbol=${symbol}`);
+    },
+
     // Fetch news and sentiment
     getNews: (params: {
         assetType: 'stock' | 'oil' | 'metal';

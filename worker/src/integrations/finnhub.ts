@@ -137,3 +137,52 @@ function getMockStockData(symbol: string, timeframe: Timeframe): PricePoint[] {
 
     return data;
 }
+
+export async function getStockQuote(
+    symbol: string,
+    env: Env
+): Promise<{ price: number; change: number; changePercent: number }> {
+    const apiKey = env.FINNHUB_API_KEY;
+
+    if (!apiKey) {
+        return getMockQuote(symbol);
+    }
+
+    try {
+        const url = new URL('https://finnhub.io/api/v1/quote');
+        url.searchParams.set('symbol', symbol);
+        url.searchParams.set('token', apiKey);
+
+        const response = await fetch(url.toString());
+
+        if (!response.ok) {
+            throw new Error(`Finnhub API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Finnhub quote response: { c: current, d: change, dp: percent change, ... }
+        return {
+            price: data.c || 0,
+            change: data.d || 0,
+            changePercent: data.dp || 0,
+        };
+    } catch (error) {
+        console.error('[Finnhub] Error fetching quote:', error);
+        return getMockQuote(symbol);
+    }
+}
+
+function getMockQuote(symbol: string): { price: number; change: number; changePercent: number } {
+    const basePrice = symbol === 'AAPL' ? 189.45 : symbol === 'TSLA' ? 242.84 : 150.00;
+    const volatility = (Math.random() - 0.5) * 2;
+    const price = basePrice + volatility;
+    const change = volatility;
+    const changePercent = (change / basePrice) * 100;
+
+    return {
+        price: Number(price.toFixed(2)),
+        change: Number(change.toFixed(2)),
+        changePercent: Number(changePercent.toFixed(2)),
+    };
+}

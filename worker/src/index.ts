@@ -42,6 +42,12 @@ export default {
                 return await handleStocksRequest(request, env, corsHeaders);
             }
 
+            // Quote endpoint (for watchlist)
+            if (path === '/api/quote' && request.method === 'GET') {
+                const { handleQuoteRequest } = await import('./routes/quote');
+                return await handleQuoteRequest(request, env, corsHeaders);
+            }
+
             // News endpoint
             if (path === '/api/news' && request.method === 'GET') {
                 const { handleNewsRequest } = await import('./routes/news');

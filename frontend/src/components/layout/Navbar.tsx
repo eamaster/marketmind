@@ -1,14 +1,17 @@
-import { Moon, Settings, Menu } from 'lucide-react';
+import { Moon, Sun, Menu } from 'lucide-react';
 import { ApiStatusIndicator } from '../shared/ApiStatusIndicator';
+import { useTheme } from '../../hooks/useTheme';
 
 interface NavbarProps {
     onMenuClick?: () => void;
 }
 
 export function Navbar({ onMenuClick }: NavbarProps) {
+    const { theme, toggleTheme } = useTheme();
+
     return (
         <nav
-            className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-900/95 backdrop-blur-md border-b border-slate-800"
+            className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3 bg-white/80 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors duration-300"
             role="navigation"
             aria-label="Main navigation"
         >
@@ -17,7 +20,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
                 {/* Mobile Menu Button */}
                 <button
                     onClick={onMenuClick}
-                    className="p-2 -ml-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors xl:hidden"
+                    className="p-2 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors xl:hidden"
                     aria-label="Open menu"
                 >
                     <Menu size={24} />
@@ -29,8 +32,8 @@ export function Navbar({ onMenuClick }: NavbarProps) {
                         M
                     </div>
                     <div>
-                        <h1 className="text-lg font-bold text-white leading-tight">MarketMind</h1>
-                        <p className="text-[10px] sm:text-xs text-slate-400 font-medium tracking-wide">Real-Time Intelligence</p>
+                        <h1 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">MarketMind</h1>
+                        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium tracking-wide">Real-Time Intelligence</p>
                     </div>
                 </div>
             </div>
@@ -42,18 +45,11 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
                 {/* Theme Toggle */}
                 <button
-                    className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors hidden sm:block"
-                    aria-label="Toggle dark mode"
+                    onClick={toggleTheme}
+                    className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+                    aria-label="Toggle theme"
                 >
-                    <Moon size={20} />
-                </button>
-
-                {/* Settings */}
-                <button
-                    className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
-                    aria-label="Settings"
-                >
-                    <Settings size={20} />
+                    {theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
                 </button>
             </div>
         </nav>

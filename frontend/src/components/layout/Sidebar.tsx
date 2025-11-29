@@ -35,13 +35,13 @@ export function Sidebar({
     }, [onClose]);
 
     const sidebarContent = (
-        <div className={`h-full overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent ${!isExpanded ? 'hidden' : ''}`}>
+        <div className={`h-full overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent ${!isExpanded ? 'hidden' : ''}`}>
             {/* Mobile Header with Close Button */}
             <div className="flex items-center justify-between xl:hidden mb-2">
-                <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Menu</h2>
+                <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Menu</h2>
                 <button
                     onClick={onClose}
-                    className="p-2 -mr-2 text-slate-400 hover:text-white transition-colors"
+                    className="p-2 -mr-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                     aria-label="Close menu"
                 >
                     <X size={20} />
@@ -83,9 +83,9 @@ export function Sidebar({
             {/* Sidebar Container */}
             <aside
                 className={`
-                    fixed xl:relative z-50 h-full
-                    bg-slate-900/95 xl:bg-slate-900/50 
-                    border-r border-slate-800 
+                    fixed xl:relative z-50 xl:z-0 h-full
+                    bg-white/95 dark:bg-slate-900/95 xl:bg-white/50 xl:dark:bg-slate-900/50 
+                    border-r border-slate-200 dark:border-slate-800 
                     transition-all duration-300 ease-in-out
                     ${className}
                     
@@ -102,7 +102,7 @@ export function Sidebar({
                 {/* Desktop Collapse Button */}
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className="hidden xl:flex absolute -right-3 top-6 z-10 p-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-700 transition-colors shadow-lg"
+                    className="hidden xl:flex absolute -right-3 top-6 z-10 p-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-lg"
                     aria-label="Toggle sidebar"
                     aria-expanded={isExpanded}
                 >

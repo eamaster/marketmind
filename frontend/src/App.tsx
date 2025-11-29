@@ -58,6 +58,7 @@ function AppContent() {
             onSymbolClick={handleSymbolClick}
           />
         }
+        bottomBar={<NewsTicker articles={stockNews.articles} />}
       >
         <DashboardPage
           activeAsset={activeAsset}
@@ -65,9 +66,6 @@ function AppContent() {
           onUseForAI={() => setIsChatOpen(true)}
         />
       </MainLayout>
-
-      {/* News Ticker - Fixed bottom */}
-      <NewsTicker articles={stockNews.articles} />
 
       {/* Floating Chat Widget Button - Bottom Right */}
       {!isChatOpen && (
@@ -92,7 +90,7 @@ function AppContent() {
           />
 
           {/* Chat Panel */}
-          <div className="fixed right-0 top-[65px] bottom-0 w-full sm:w-96 bg-slate-900 shadow-2xl z-50 transform transition-transform duration-300 ease-out border-l border-slate-800">
+          <div className="fixed right-0 top-[65px] bottom-0 w-full sm:w-96 bg-white dark:bg-slate-900 shadow-2xl z-50 transform transition-transform duration-300 ease-out border-l border-slate-200 dark:border-slate-800">
             {/* AI Chat Panel Content */}
             <div className="h-full">
               <AiChatPanel

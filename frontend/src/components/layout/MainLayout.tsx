@@ -4,11 +4,13 @@ import { Navbar } from './Navbar';
 interface MainLayoutProps {
     children: ReactNode;
     sidebar?: ReactNode;
+    bottomBar?: ReactNode;
 }
 
 export function MainLayout({
     children,
     sidebar,
+    bottomBar,
 }: MainLayoutProps) {
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -21,7 +23,7 @@ export function MainLayout({
         : sidebar;
 
     return (
-        <div className="min-h-screen flex flex-col bg-slate-950">
+        <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
             {/* Top Navbar */}
             <Navbar onMenuClick={() => setIsMobileSidebarOpen(true)} />
 

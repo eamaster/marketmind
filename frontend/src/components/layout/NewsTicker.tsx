@@ -51,7 +51,7 @@ export function NewsTicker({ articles }: NewsTickerProps) {
 
     return (
         <div
-            className="fixed bottom-0 left-0 right-0 h-12 bg-slate-900/95 border-t border-slate-800 overflow-hidden z-40"
+            className="w-full h-12 bg-slate-100 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-800 overflow-hidden z-40"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
             aria-live="off"
@@ -71,14 +71,14 @@ export function NewsTicker({ articles }: NewsTickerProps) {
                     return (
                         <div
                             key={`${article.id}-${idx}`}
-                            className="inline-flex items-center gap-2 px-6 text-sm text-slate-300 whitespace-nowrap"
+                            className="inline-flex items-center gap-2 px-6 text-sm text-slate-600 dark:text-slate-300 whitespace-nowrap"
                         >
-                            <span className="text-red-400 font-semibold">Breaking:</span>
-                            <span>{article.title}</span>
+                            <span className="text-red-500 dark:text-red-400 font-semibold">Breaking:</span>
+                            <span className="font-medium text-slate-900 dark:text-slate-200">{article.title}</span>
                             <span className="text-slate-500">({article.source})</span>
                             <span className="text-slate-500">• {timeAgo}</span>
                             <span>{sentiment}</span>
-                            <span className="text-slate-700 mx-4">•</span>
+                            <span className="text-slate-400 dark:text-slate-700 mx-4">•</span>
                         </div>
                     );
                 })}
