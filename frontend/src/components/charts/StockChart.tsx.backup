@@ -1,32 +1,21 @@
-import {
-    LineChart,
-    Line,
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ReferenceLine,
-    ResponsiveContainer,
-    Area,
-} from 'recharts';
+import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Star, Maximize2, Share2 } from 'lucide-react';
 import { PriceAnimated } from '../shared/PriceAnimated';
 import { TimeframeSelector } from '../shared/TimeframeSelector';
 import type { PricePoint, Timeframe } from '../../services/types';
 
-interface GoldChartProps {
+interface StockChartProps {
     data: PricePoint[] | null;
     timeframe: Timeframe;
     symbol?: string;
-    name?: string;
+    companyName?: string;
     sentiment?: 'bullish' | 'bearish' | 'neutral';
     isLoading?: boolean;
     error?: Error | null;
     onTimeframeChange?: (tf: Timeframe) => void;
 }
 
+// Helper: Format volume (45.2M instead of 45200000)
 function formatVolume(volume: number): string {
     if (volume >= 1e9) return `${(volume / 1e9).toFixed(1)}B`;
     if (volume >= 1e6) return `${(volume / 1e6).toFixed(1)}M`;
@@ -34,10 +23,8 @@ function formatVolume(volume: number): string {
     return volume.toString();
 }
 
-function calculateSupportResistance(data: PricePoint[]): {
-    support: number;
-    resistance: number;
-} {
+// Helper: Calculate support/resistance from chart data (USER MOD #8)
+function calculateSupportResistance(data: PricePoint[]): { support: number; resistance: number } {
     if (!data || data.length < 20) {
         const currentPrice = data?.[data.length - 1]?.close || 0;
         return {
@@ -55,39 +42,25 @@ function calculateSupportResistance(data: PricePoint[]): {
     };
 }
 
+// Helper: Get sentiment data
 function getSentimentData(sentiment: 'bullish' | 'bearish' | 'neutral') {
     const config = {
-        bullish: {
-            label: 'Bullish',
-            emoji: '🐂',
-            color: 'text-amber-400',
-            score: 0.75,
-        },
-        bearish: {
-            label: 'Bearish',
-            emoji: '🐻',
-            color: 'text-red-400',
-            score: 0.25,
-        },
-        neutral: {
-            label: 'Neutral',
-            emoji: '⚪',
-            color: 'text-amber-400',
-            score: 0.5,
-        },
+        bullish: { label: 'Bullish', emoji: '🐂', color: 'text-emerald-400', score: 0.75 },
+        bearish: { label: 'Bearish', emoji: '🐻', color: 'text-red-400', score: 0.25 },
+        neutral: { label: 'Neutral', emoji: '⚪', color: 'text-slate-400', score: 0.5 },
     };
     return config[sentiment];
 }
 
-export function GoldChart({
+export function StockChart({
     data,
     timeframe,
-    symbol = 'XAU/USD',
-    name = 'Gold Spot',
-    sentiment = 'neutral', // Gold shown as neutral/bullish in reference
+    symbol = 'AAPL',
+    companyName = 'Apple Inc.',
+    sentiment = 'bullish',
     isLoading = false,
     onTimeframeChange,
-}: GoldChartProps) {
+}: StockChartProps) {
     if (isLoading) {
         return (
             <div className="h-[500px] flex items-center justify-center">
@@ -104,6 +77,7 @@ export function GoldChart({
         );
     }
 
+    // Format data for Recharts
     const chartData = data.map((point) => ({
         time: new Date(point.timestamp).toLocaleTimeString([], {
             hour: '2-digit',
@@ -116,6 +90,7 @@ export function GoldChart({
         volume: point.volume || 0,
     }));
 
+    // Calculate stats
     const currentPrice = data[data.length - 1]?.close || 0;
     const previousPrice = data[0]?.close || currentPrice;
     const priceChange = ((currentPrice - previousPrice) / previousPrice) * 100;
@@ -136,14 +111,16 @@ export function GoldChart({
         <div
             className="space-y-4"
             role="img"
-            aria-label={`Gold price chart for ${symbol}`}
+            aria-label={`Stock price chart for ${symbol}`}
         >
             {/* HEADER SECTION */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <span className="text-2xl">💰</span>
+                    <span className="text-2xl">🍎</span>
                     <div>
-                        <h3 className="text-lg font-semibold text-slate-200">{name}</h3>
+                        <h3 className="text-lg font-semibold text-slate-200">
+                            {companyName}
+                        </h3>
                         <p className="text-xs text-slate-400 font-mono">{symbol}</p>
                     </div>
                 </div>
@@ -160,7 +137,7 @@ export function GoldChart({
                         className="text-3xl font-bold font-mono text-slate-100"
                     />
                     <span
-                        className={`text-lg ${isBullish ? 'text-amber-400' : 'text-red-400'
+                        className={`text-lg ${isBullish ? 'text-emerald-400' : 'text-red-400'
                             }`}
                     >
                         {isBullish ? '↑' : '↓'} {Math.abs(priceChange).toFixed(2)}% (
@@ -169,6 +146,7 @@ export function GoldChart({
                     </span>
                 </div>
 
+                {/* Mini stats row */}
                 <div className="mt-2 flex gap-4 text-xs text-slate-400 font-mono">
                     <span>O: ${stats.open.toFixed(2)}</span>
                     <span>H: ${stats.high.toFixed(2)}</span>
@@ -177,13 +155,17 @@ export function GoldChart({
                 </div>
             </div>
 
-            {/* CHART AREA - GOLD/AMBER THEME */}
+            {/* CHART AREA WITH GRADIENT */}
             <ResponsiveContainer width="100%" height={256}>
-                <LineChart data={chartData}>
+                <AreaChart data={chartData}>
                     <defs>
-                        <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                        <linearGradient id="bullGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="bearGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                         </linearGradient>
                     </defs>
 
@@ -201,25 +183,26 @@ export function GoldChart({
                         domain={['auto', 'auto']}
                     />
 
+                    {/* Support/Resistance Lines */}
                     <ReferenceLine
                         y={support}
-                        stroke="#fbbf24"
+                        stroke="#f87171"
                         strokeDasharray="5 5"
                         label={{
                             value: `Support: $${support.toFixed(2)}`,
                             fontSize: 10,
-                            fill: '#fbbf24',
+                            fill: '#f87171',
                             position: 'insideBottomLeft',
                         }}
                     />
                     <ReferenceLine
                         y={resistance}
-                        stroke="#f59e0b"
+                        stroke="#34d399"
                         strokeDasharray="5 5"
                         label={{
                             value: `Resistance: $${resistance.toFixed(2)}`,
                             fontSize: 10,
-                            fill: '#f59e0b',
+                            fill: '#34d399',
                             position: 'insideTopLeft',
                         }}
                     />
@@ -235,22 +218,16 @@ export function GoldChart({
                         itemStyle={{ color: '#cbd5e1' }}
                     />
 
-                    <Area
-                        type="monotone"
-                        dataKey="close"
-                        stroke="#f59e0b"
-                        strokeWidth={2}
-                        fill="url(#goldGradient)"
-                        dot={false}
-                    />
-                </LineChart>
-            </ResponsiveContainer>
-
-            {/* VOLUME BARS */}
-            <ResponsiveContainer width="100%" height={64}>
-                <BarChart data={chartData}>
-                    <Bar dataKey="volume" fill="rgba(245, 158, 11, 0.6)" />
-                </BarChart>
+                    <BarChart data={chartData}>
+                        <Bar
+                            dataKey="volume"
+                            fill={
+                                isBullish
+                                    ? 'rgba(16, 185, 129, 0.6)'
+                                    : 'rgba(239, 68, 68, 0.6)'
+                            }
+                        />
+                    </BarChart>
             </ResponsiveContainer>
 
             {/* SENTIMENT GAUGE */}

@@ -5,19 +5,21 @@ interface TimeframeSelectorProps {
     onChange: (timeframe: Timeframe) => void;
 }
 
+// Only 1D, 1W, 1M allowed - respects Finnhub 1-year historical data limit
 const timeframes: Timeframe[] = ['1D', '1W', '1M'];
 
 export function TimeframeSelector({ value, onChange }: TimeframeSelectorProps) {
     return (
-        <div className="inline-flex rounded-lg bg-gray-200 p-1">
+        <div className="inline-flex gap-1 rounded-full bg-slate-800/50 p-1">
             {timeframes.map((tf) => (
                 <button
                     key={tf}
                     onClick={() => onChange(tf)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${value === tf
-                            ? 'bg-white text-blue-600 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${value === tf
+                            ? 'bg-blue-500 text-white shadow-sm'
+                            : 'bg-transparent text-slate-400 hover:text-slate-200'
                         }`}
+                    aria-pressed={value === tf}
                 >
                     {tf}
                 </button>

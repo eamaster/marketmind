@@ -1,4 +1,4 @@
-import {
+﻿import {
     LineChart,
     Line,
     BarChart,
@@ -59,19 +59,19 @@ function getSentimentData(sentiment: 'bullish' | 'bearish' | 'neutral') {
     const config = {
         bullish: {
             label: 'Bullish',
-            emoji: '🐂',
+            emoji: 'ðŸ‚',
             color: 'text-amber-400',
             score: 0.75,
         },
         bearish: {
             label: 'Bearish',
-            emoji: '🐻',
+            emoji: 'ðŸ»',
             color: 'text-red-400',
             score: 0.25,
         },
         neutral: {
             label: 'Neutral',
-            emoji: '⚪',
+            emoji: 'âšª',
             color: 'text-amber-400',
             score: 0.5,
         },
@@ -141,7 +141,7 @@ export function GoldChart({
             {/* HEADER SECTION */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <span className="text-2xl">💰</span>
+                    <span className="text-2xl">ðŸ’°</span>
                     <div>
                         <h3 className="text-lg font-semibold text-slate-200">{name}</h3>
                         <p className="text-xs text-slate-400 font-mono">{symbol}</p>
@@ -163,7 +163,7 @@ export function GoldChart({
                         className={`text-lg ${isBullish ? 'text-amber-400' : 'text-red-400'
                             }`}
                     >
-                        {isBullish ? '↑' : '↓'} {Math.abs(priceChange).toFixed(2)}% (
+                        {isBullish ? 'â†‘' : 'â†“'} {Math.abs(priceChange).toFixed(2)}% (
                         {priceChangeAbsolute >= 0 ? '+' : ''}
                         {priceChangeAbsolute.toFixed(2)})
                     </span>

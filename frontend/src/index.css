@@ -2,23 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom base styles for financial data */
+/* Custom base styles for dark theme financial dashboard */
 @layer base {
+  :root {
+    --gradient-bull: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    --gradient-bear: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+    --gradient-ai: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+  }
+  
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-slate-950 text-slate-100 font-sans antialiased;
   }
 }
 
 @layer components {
-  .card {
-    @apply bg-white rounded-lg shadow-md p-4;
+  /* Glassmorphism card for premium look */
+  .glass-card {
+    @apply bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 rounded-xl shadow-2xl shadow-black/20 p-4;
+    @apply hover:border-slate-600/80 transition-all duration-150;
   }
   
+  /* Legacy card class (for backward compatibility) */
+  .card {
+    @apply glass-card;
+  }
+  
+  /* Gradient backgrounds */
+  .gradient-bull {
+    background: var(--gradient-bull);
+  }
+  
+  .gradient-bear {
+    background: var(--gradient-bear);
+  }
+  
+  .gradient-ai {
+    background: var(--gradient-ai);
+  }
+  
+  /* Button styles */
   .btn-primary {
     @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors;
   }
   
   .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-900 font-medium py-2 px-4 rounded-lg transition-colors;
+    @apply bg-slate-700 hover:bg-slate-600 text-slate-100 font-medium py-2 px-4 rounded-lg transition-colors;
+  }
+  
+  /* News ticker marquee animation */
+  .marquee-content {
+    animation: marquee 60s linear infinite;
+  }
+  
+  .marquee-content:hover {
+    animation-play-state: paused;
+  }
+}
+
+/* Utility for pausing animations when tab is inactive */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-content {
+    animation: none;
   }
 }

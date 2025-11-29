@@ -1,36 +1,36 @@
-import type { SentimentSummary } from '../../services/types';
-
 interface SentimentBadgeProps {
-    sentiment: SentimentSummary | null;
+    sentiment: 'bullish' | 'bearish' | 'neutral' | null;
 }
+
+const sentimentConfig = {
+    bullish: {
+        emoji: '🐂',
+        label: 'Bullish',
+        className: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
+    },
+    bearish: {
+        emoji: '🐻',
+        label: 'Bearish',
+        className: 'bg-red-500/10 border-red-500/30 text-red-400',
+    },
+    neutral: {
+        emoji: '⚪',
+        label: 'Neutral',
+        className: 'bg-slate-500/10 border-slate-500/30 text-slate-400',
+    },
+};
 
 export function SentimentBadge({ sentiment }: SentimentBadgeProps) {
     if (!sentiment) {
-        return (
-            <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-700">
-                No Data
-            </span>
-        );
+        return null;
     }
 
-    const { label, score } = sentiment;
-
-    const colors = {
-        bullish: 'bg-bullish-light text-white',
-        bearish: 'bg-bearish-light text-white',
-        neutral: 'bg-neutral text-white',
-    };
-
-    const icons = {
-        bullish: '📈',
-        bearish: '📉',
-        neutral: '➡️',
-    };
+    const config = sentimentConfig[sentiment];
 
     return (
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${colors[label]}`}>
-            {icons[label]} {label.charAt(0).toUpperCase() + label.slice(1)}
-            {score !== null && ` (${score > 0 ? '+' : ''}${score.toFixed(2)})`}
+        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${config.className}`}>
+            <span>{config.emoji}</span>
+            <span>{config.label}</span>
         </span>
     );
 }
