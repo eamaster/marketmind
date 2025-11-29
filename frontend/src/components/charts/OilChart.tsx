@@ -14,6 +14,7 @@ import { TrendingUp, Star, Maximize2, Share2 } from 'lucide-react';
 import { PriceAnimated } from '../shared/PriceAnimated';
 import { TimeframeSelector } from '../shared/TimeframeSelector';
 import type { PricePoint, Timeframe } from '../../services/types';
+import { useTheme } from '../../hooks/useTheme';
 
 interface OilChartProps {
     data: PricePoint[] | null;
@@ -99,6 +100,9 @@ export function OilChart({
     availableCodes,
     onUseForAI,
 }: OilChartProps) {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
     if (isLoading) {
         return (
             <div className="h-[500px] flex items-center justify-center">
@@ -152,8 +156,8 @@ export function OilChart({
             {/* HEADER SECTION */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                    <h3 className="text-lg font-semibold text-slate-200">{name}</h3>
-                    <p className="text-xs text-slate-400 font-mono">{code}</p>
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-200">{name}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">{code}</p>
                 </div>
 
                 {/* Oil Type + Timeframe Controls */}
@@ -163,11 +167,11 @@ export function OilChart({
                         <select
                             value={code}
                             onChange={(e) => onCodeChange(e.target.value)}
-                            className="px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-200 text-sm hover:bg-slate-700/50 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all w-full sm:w-auto min-h-[44px] sm:min-h-0"
+                            className="px-3 py-2 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-200 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all w-full sm:w-auto min-h-[44px] sm:min-h-0"
                             aria-label="Select oil type"
                         >
                             {(availableCodes || DEFAULT_OIL_CODES).map((opt) => (
-                                <option key={opt.value} value={opt.value} className="bg-slate-800">
+                                <option key={opt.value} value={opt.value} className="bg-white dark:bg-slate-800">
                                     {opt.label}
                                 </option>
                             ))}
@@ -197,10 +201,10 @@ export function OilChart({
                 <div className="flex items-baseline gap-3">
                     <PriceAnimated
                         value={currentPrice}
-                        className="text-3xl font-bold font-mono text-slate-100"
+                        className="text-3xl font-bold font-mono text-slate-900 dark:text-slate-100"
                     />
                     <span
-                        className={`text-lg ${isBullish ? 'text-emerald-400' : 'text-red-400'
+                        className={`text-lg ${isBullish ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
                             }`}
                     >
                         {isBullish ? '↑' : '↓'} {Math.abs(priceChange).toFixed(2)}% (
@@ -209,7 +213,7 @@ export function OilChart({
                     </span>
                 </div>
 
-                <div className="mt-2 flex gap-4 text-xs text-slate-400 font-mono">
+                <div className="mt-2 flex gap-4 text-xs text-slate-500 dark:text-slate-400 font-mono">
                     <span>O: ${stats.open.toFixed(2)}</span>
                     <span>H: ${stats.high.toFixed(2)}</span>
                     <span>L: ${stats.low.toFixed(2)}</span>
@@ -227,16 +231,16 @@ export function OilChart({
                         </linearGradient>
                     </defs>
 
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} opacity={0.3} />
                     <XAxis
                         dataKey="time"
-                        stroke="#64748b"
-                        tick={{ fontSize: 12 }}
+                        stroke={isDark ? "#64748b" : "#94a3b8"}
+                        tick={{ fontSize: 12, fill: isDark ? "#94a3b8" : "#64748b" }}
                         tickLine={false}
                     />
                     <YAxis
-                        stroke="#64748b"
-                        tick={{ fontSize: 12 }}
+                        stroke={isDark ? "#64748b" : "#94a3b8"}
+                        tick={{ fontSize: 12, fill: isDark ? "#94a3b8" : "#64748b" }}
                         tickLine={false}
                         domain={['auto', 'auto']}
                     />
@@ -266,13 +270,15 @@ export function OilChart({
 
                     <Tooltip
                         contentStyle={{
-                            backgroundColor: '#1e293b',
-                            border: '1px solid #334155',
+                            backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                            borderColor: isDark ? '#334155' : '#e2e8f0',
                             borderRadius: '8px',
                             fontSize: '12px',
+                            color: isDark ? '#f1f5f9' : '#0f172a',
+                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                         }}
-                        labelStyle={{ color: '#cbd5e1' }}
-                        itemStyle={{ color: '#cbd5e1' }}
+                        labelStyle={{ color: isDark ? '#cbd5e1' : '#64748b' }}
+                        itemStyle={{ color: isDark ? '#cbd5e1' : '#334155' }}
                     />
 
                     <Area
@@ -296,7 +302,7 @@ export function OilChart({
             {/* SENTIMENT GAUGE */}
             <div>
                 <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-slate-400">
+                    <span className="text-sm text-slate-500 dark:text-slate-400">
                         Sentiment:{' '}
                         <span className={sentimentData.color}>
                             {sentimentData.label} {sentimentData.emoji}
@@ -304,7 +310,7 @@ export function OilChart({
                     </span>
                 </div>
                 <div
-                    className="h-2 rounded-full bg-slate-700 overflow-hidden"
+                    className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden"
                     role="progressbar"
                     aria-valuenow={sentimentData.score}
                     aria-valuemin={0}
@@ -324,7 +330,7 @@ export function OilChart({
             {/* ACTION BUTTONS */}
             <div className="flex gap-2">
                 <button
-                    className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 text-slate-400 hover:text-slate-200 transition-colors"
+                    className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
                     aria-label="Compare with other assets"
                     role="button"
                     tabIndex={0}
@@ -332,7 +338,7 @@ export function OilChart({
                     <TrendingUp size={20} />
                 </button>
                 <button
-                    className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 text-slate-400 hover:text-slate-200 transition-colors"
+                    className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
                     aria-label="Add to watchlist"
                     role="button"
                     tabIndex={0}
@@ -340,7 +346,7 @@ export function OilChart({
                     <Star size={20} />
                 </button>
                 <button
-                    className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 text-slate-400 hover:text-slate-200 transition-colors"
+                    className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
                     aria-label="View fullscreen"
                     role="button"
                     tabIndex={0}
@@ -348,7 +354,7 @@ export function OilChart({
                     <Maximize2 size={20} />
                 </button>
                 <button
-                    className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 text-slate-400 hover:text-slate-200 transition-colors"
+                    className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
                     aria-label="Share chart"
                     role="button"
                     tabIndex={0}
