@@ -25,7 +25,15 @@ interface GoldChartProps {
     isLoading?: boolean;
     error?: Error | null;
     onTimeframeChange?: (tf: Timeframe) => void;
+    onSymbolChange?: (symbol: string) => void;
+    availableSymbols?: Array<{ value: string; label: string }>;
 }
+
+// Default metal symbols
+const DEFAULT_METAL_SYMBOLS = [
+    { value: 'XAU', label: 'Gold (XAU/USD)' },
+    { value: 'XAG', label: 'Silver (XAG/USD)' },
+];
 
 function formatVolume(volume: number): string {
     if (volume >= 1e9) return `${(volume / 1e9).toFixed(1)}B`;
@@ -84,9 +92,11 @@ export function GoldChart({
     timeframe,
     symbol = 'XAU/USD',
     name = 'Gold Spot',
-    sentiment = 'neutral', // Gold shown as neutral/bullish in reference
+    sentiment = 'neutral',
     isLoading = false,
     onTimeframeChange,
+    onSymbolChange,
+    availableSymbols,
 }: GoldChartProps) {
     if (isLoading) {
         return (
@@ -139,17 +149,35 @@ export function GoldChart({
             aria-label={`Gold price chart for ${symbol}`}
         >
             {/* HEADER SECTION */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <span className="text-2xl">💰</span>
-                    <div>
-                        <h3 className="text-lg font-semibold text-slate-200">{name}</h3>
-                        <p className="text-xs text-slate-400 font-mono">{symbol}</p>
-                    </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <h3 className="text-lg font-semibold text-slate-200">{name}</h3>
+                    <p className="text-xs text-slate-400 font-mono">{symbol}</p>
                 </div>
-                {onTimeframeChange && (
-                    <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
-                )}
+
+                {/* Metal + Timeframe Controls */}
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    {/* Metal Selector */}
+                    {onSymbolChange && (
+                        <select
+                            value={symbol.includes('XAU') ? 'XAU' : 'XAG'}
+                            onChange={(e) => onSymbolChange(e.target.value)}
+                            className="px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-200 text-sm hover:bg-slate-700/50 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all w-full sm:w-auto min-h-[44px] sm:min-h-0"
+                            aria-label="Select metal"
+                        >
+                            {(availableSymbols || DEFAULT_METAL_SYMBOLS).map((opt) => (
+                                <option key={opt.value} value={opt.value} className="bg-slate-800">
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+
+                    {/* Timeframe Selector */}
+                    {onTimeframeChange && (
+                        <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
+                    )}
+                </div>
             </div>
 
             {/* PRICE & STATS SECTION */}

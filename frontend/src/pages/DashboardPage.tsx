@@ -15,6 +15,22 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({ activeAsset = 'stock' }: DashboardPageProps) {
+    // Symbol to company name mapping
+    const stockNameMap: Record<StockSymbol, string> = {
+        'AAPL': 'Apple Inc.',
+        'TSLA': 'Tesla Inc.',
+        'NVDA': 'NVIDIA Corp.',
+        'MSFT': 'Microsoft Corp.',
+        'GOOGL': 'Alphabet Inc.',
+        'AMZN': 'Amazon.com Inc.',
+        'META': 'Meta Platforms Inc.',
+    };
+
+    const oilNameMap: Record<OilCode, string> = {
+        'WTI_USD': 'WTI Crude Oil',
+        'BRENT_USD': 'Brent Crude Oil',
+    };
+
     // State for all three asset types
     const [stockSymbol, setStockSymbol] = useState<StockSymbol>('AAPL');
     const [stockTimeframe, setStockTimeframe] = useState<Timeframe>('1D');
@@ -71,11 +87,12 @@ export function DashboardPage({ activeAsset = 'stock' }: DashboardPageProps) {
                                     data={stockData.data}
                                     timeframe={stockTimeframe}
                                     symbol={stockSymbol}
-                                    companyName="Apple Inc."
+                                    companyName={stockNameMap[stockSymbol]}
                                     sentiment={stockNews.sentiment?.label || 'neutral'}
                                     isLoading={stockData.isLoading}
                                     error={stockData.error}
                                     onTimeframeChange={setStockTimeframe}
+                                    onSymbolChange={(newSymbol) => setStockSymbol(newSymbol as any)}
                                 />
                                 <div className="mt-3 pt-3 border-t border-slate-700">
                                     <CacheTimestamp
@@ -97,11 +114,12 @@ export function DashboardPage({ activeAsset = 'stock' }: DashboardPageProps) {
                                     data={oilData.data}
                                     timeframe={oilTimeframe}
                                     code={oilCode}
-                                    name="Crude Oil Futures"
+                                    name={oilNameMap[oilCode]}
                                     sentiment={oilNews.sentiment?.label || 'bearish'}
                                     isLoading={oilData.isLoading}
                                     error={oilData.error}
                                     onTimeframeChange={setOilTimeframe}
+                                    onCodeChange={(newCode) => setOilCode(newCode as any)}
                                 />
                                 <div className="mt-3 pt-3 border-t border-slate-700">
                                     <CacheTimestamp
@@ -128,6 +146,7 @@ export function DashboardPage({ activeAsset = 'stock' }: DashboardPageProps) {
                                     isLoading={metalData.isLoading}
                                     error={metalData.error}
                                     onTimeframeChange={setMetalTimeframe}
+                                    onSymbolChange={(newSymbol) => setMetalSymbol(newSymbol as any)}
                                 />
                                 <div className="mt-3 pt-3 border-t border-slate-700">
                                     <CacheTimestamp

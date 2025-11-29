@@ -13,7 +13,20 @@ interface StockChartProps {
     isLoading?: boolean;
     error?: Error | null;
     onTimeframeChange?: (tf: Timeframe) => void;
+    onSymbolChange?: (symbol: string) => void;
+    availableSymbols?: Array<{ value: string; label: string }>;
 }
+
+// Default stock symbols
+const DEFAULT_STOCK_SYMBOLS = [
+    { value: 'AAPL', label: 'Apple Inc. (AAPL)' },
+    { value: 'TSLA', label: 'Tesla Inc. (TSLA)' },
+    { value: 'NVDA', label: 'NVIDIA Corp. (NVDA)' },
+    { value: 'MSFT', label: 'Microsoft Corp. (MSFT)' },
+    { value: 'GOOGL', label: 'Alphabet Inc. (GOOGL)' },
+    { value: 'AMZN', label: 'Amazon.com Inc. (AMZN)' },
+    { value: 'META', label: 'Meta Platforms Inc. (META)' },
+];
 
 // Helper: Format volume (45.2M instead of 45200000)
 function formatVolume(volume: number): string {
@@ -60,6 +73,8 @@ export function StockChart({
     sentiment = 'bullish',
     isLoading = false,
     onTimeframeChange,
+    onSymbolChange,
+    availableSymbols,
 }: StockChartProps) {
     if (isLoading) {
         return (
@@ -114,19 +129,37 @@ export function StockChart({
             aria-label={`Stock price chart for ${symbol}`}
         >
             {/* HEADER SECTION */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <span className="text-2xl">🍎</span>
-                    <div>
-                        <h3 className="text-lg font-semibold text-slate-200">
-                            {companyName}
-                        </h3>
-                        <p className="text-xs text-slate-400 font-mono">{symbol}</p>
-                    </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <h3 className="text-lg font-semibold text-slate-200">
+                        {companyName}
+                    </h3>
+                    <p className="text-xs text-slate-400 font-mono">{symbol}</p>
                 </div>
-                {onTimeframeChange && (
-                    <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
-                )}
+
+                {/* Symbol + Timeframe Controls */}
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    {/* Symbol Selector */}
+                    {onSymbolChange && (
+                        <select
+                            value={symbol}
+                            onChange={(e) => onSymbolChange(e.target.value)}
+                            className="px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-200 text-sm hover:bg-slate-700/50 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all w-full sm:w-auto min-h-[44px] sm:min-h-0"
+                            aria-label="Select stock symbol"
+                        >
+                            {(availableSymbols || DEFAULT_STOCK_SYMBOLS).map((opt) => (
+                                <option key={opt.value} value={opt.value} className="bg-slate-800">
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+
+                    {/* Timeframe Selector */}
+                    {onTimeframeChange && (
+                        <TimeframeSelector value={timeframe} onChange={onTimeframeChange} />
+                    )}
+                </div>
             </div>
 
             {/* PRICE & STATS SECTION */}
