@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useState, type ReactNode, cloneElement, isValidElement } from 'react';
 import { Navbar } from './Navbar';
 
 interface MainLayoutProps {
@@ -10,23 +10,29 @@ export function MainLayout({
     children,
     sidebar,
 }: MainLayoutProps) {
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+    // Clone sidebar to inject props if it's a valid element
+    const sidebarWithProps = isValidElement(sidebar)
+        ? cloneElement(sidebar as any, {
+            isOpen: isMobileSidebarOpen,
+            onClose: () => setIsMobileSidebarOpen(false),
+        })
+        : sidebar;
+
     return (
         <div className="min-h-screen flex flex-col bg-slate-950">
             {/* Top Navbar */}
-            <Navbar />
+            <Navbar onMenuClick={() => setIsMobileSidebarOpen(true)} />
 
             {/* Main Content Area */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* Left Sidebar - Hidden on < 1280px */}
-                {sidebar && (
-                    <div className="hidden xl:block">
-                        {sidebar}
-                    </div>
-                )}
+            <div className="flex-1 flex overflow-hidden relative">
+                {/* Left Sidebar - Now handles its own responsive visibility */}
+                {sidebarWithProps}
 
                 {/* Center: Dashboard Grid */}
                 <main
-                    className="flex-1 overflow-y-auto p-6"
+                    className="flex-1 overflow-y-auto p-4 sm:p-6 w-full"
                     role="main"
                     aria-label="Asset dashboard"
                 >
