@@ -4,6 +4,13 @@ import type { ChatMessage } from '../../services/types';
 
 interface AiChatPanelProps {
     messages: ChatMessage[];
+    onSendQuestion: (question: string) => void;
+    isLoading: boolean;
+    currentContext: {
+        assetType: string;
+        symbol: string;
+        timeframe: string;
+    };
     onClose: () => void;
 }
 

@@ -4,7 +4,7 @@ import { MainLayout } from './components/layout/MainLayout';
 import { Sidebar } from './components/layout/Sidebar';
 import { AiChatPanel } from './components/ai/AiChatPanel';
 import { NewsTicker } from './components/layout/NewsTicker';
-import { MessageCircle, X } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useNews } from './hooks/useNews';
 import { useAiAnalyst } from './hooks/useAiAnalyst';
