@@ -8,6 +8,7 @@ import {
     ReferenceLine,
     ResponsiveContainer,
     ComposedChart,
+    Cell,
 } from 'recharts';
 import { TrendingUp, Star, Maximize2, Share2 } from 'lucide-react';
 import { PriceAnimated } from '../shared/PriceAnimated';
@@ -111,17 +112,24 @@ export function StockChart({
     }
 
     // Format data for Recharts
-    const chartData = data.map((point) => ({
-        time: new Date(point.timestamp).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-        }),
-        close: point.close,
-        open: point.open,
-        high: point.high,
-        low: point.low,
-        volume: point.volume || 0,
-    }));
+    const chartData = data.map((point, index) => {
+        const color = index === 0
+            ? (point.close >= point.open ? '#10b981' : '#ef4444')
+            : (point.close >= data[index - 1].close ? '#10b981' : '#ef4444');
+
+        return {
+            time: new Date(point.timestamp).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+            }),
+            close: point.close,
+            open: point.open,
+            high: point.high,
+            low: point.low,
+            volume: point.volume || 0,
+            color, // Add color to data point
+        };
+    });
 
     // Calculate stats
     const lastClose = data[data.length - 1]?.close || 0;
@@ -304,9 +312,12 @@ export function StockChart({
                     <Bar
                         yAxisId="volume"
                         dataKey="volume"
-                        fill={isBullish ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}
                         barSize={4}
-                    />
+                    >
+                        {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} opacity={0.3} />
+                        ))}
+                    </Bar>
 
                     {/* Price Area */}
                     <Area

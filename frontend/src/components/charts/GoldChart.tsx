@@ -8,6 +8,7 @@ import {
     ReferenceLine,
     ResponsiveContainer,
     ComposedChart,
+    Cell,
 } from 'recharts';
 import { TrendingUp, Star, Maximize2, Share2 } from 'lucide-react';
 import { PriceAnimated } from '../shared/PriceAnimated';
@@ -120,17 +121,24 @@ export function GoldChart({
         );
     }
 
-    const chartData = data.map((point) => ({
-        time: new Date(point.timestamp).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-        }),
-        close: point.close,
-        open: point.open,
-        high: point.high,
-        low: point.low,
-        volume: point.volume || 0,
-    }));
+    const chartData = data.map((point, index) => {
+        const color = index === 0
+            ? (point.close >= point.open ? '#10b981' : '#ef4444')
+            : (point.close >= data[index - 1].close ? '#10b981' : '#ef4444');
+
+        return {
+            time: new Date(point.timestamp).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+            }),
+            close: point.close,
+            open: point.open,
+            high: point.high,
+            low: point.low,
+            volume: point.volume || 0,
+            color,
+        };
+    });
 
     const lastClose = data[data.length - 1]?.close || 0;
     const currentPrice = overridePrice || lastClose;
@@ -304,9 +312,12 @@ export function GoldChart({
                     <Bar
                         yAxisId="volume"
                         dataKey="volume"
-                        fill="rgba(245, 158, 11, 0.3)"
                         barSize={4}
-                    />
+                    >
+                        {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} opacity={0.3} />
+                        ))}
+                    </Bar>
 
                     {/* Price Area */}
                     <Area
