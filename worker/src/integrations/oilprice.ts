@@ -140,6 +140,7 @@ function getMockOilData(code: string, timeframe: Timeframe): PricePoint[] {
             open: Number((close + (Math.random() - 0.5) * 0.5).toFixed(2)),
             high: Number((close + Math.random() * 0.5).toFixed(2)),
             low: Number((close - Math.random() * 0.5).toFixed(2)),
+            volume: Math.floor(Math.random() * 1000000) + 500000,
         });
     }
 

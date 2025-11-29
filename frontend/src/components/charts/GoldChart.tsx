@@ -1,5 +1,5 @@
 import {
-    LineChart,
+    AreaChart,
     BarChart,
     Bar,
     XAxis,
@@ -206,7 +206,7 @@ export function GoldChart({
 
             {/* CHART AREA - GOLD/AMBER THEME */}
             <ResponsiveContainer width="100%" height={256}>
-                <LineChart data={chartData}>
+                <AreaChart data={chartData}>
                     <defs>
                         <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
@@ -270,7 +270,7 @@ export function GoldChart({
                         fill="url(#goldGradient)"
                         dot={false}
                     />
-                </LineChart>
+                </AreaChart>
             </ResponsiveContainer>
 
             {/* VOLUME BARS */}

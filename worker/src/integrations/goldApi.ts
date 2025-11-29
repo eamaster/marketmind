@@ -97,6 +97,7 @@ function getMockGoldData(symbol: string, timeframe: Timeframe): PricePoint[] {
             open: Number((close + (Math.random() - 0.5) * 2).toFixed(2)),
             high: Number((close + Math.random() * 2).toFixed(2)),
             low: Number((close - Math.random() * 2).toFixed(2)),
+            volume: Math.floor(Math.random() * 500000) + 100000,
         });
     }
 

@@ -1,5 +1,5 @@
 import {
-    LineChart,
+    AreaChart,
     BarChart,
     Bar,
     XAxis,
@@ -206,7 +206,7 @@ export function OilChart({
 
             {/* CHART AREA - RED THEME FOR OIL */}
             <ResponsiveContainer width="100%" height={256}>
-                <LineChart data={chartData}>
+                <AreaChart data={chartData}>
                     <defs>
                         <linearGradient id="oilGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
@@ -270,7 +270,7 @@ export function OilChart({
                         fill="url(#oilGradient)"
                         dot={false}
                     />
-                </LineChart>
+                </AreaChart>
             </ResponsiveContainer>
 
             {/* VOLUME BARS */}
