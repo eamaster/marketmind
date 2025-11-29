@@ -41,6 +41,9 @@ export function MainLayout({
                     {children}
                 </main>
             </div>
+
+            {/* Bottom Bar (News Ticker) */}
+            {bottomBar}
         </div>
     );
 }

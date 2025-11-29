@@ -3,9 +3,9 @@ import { apiClient } from '../../services/apiClient';
 
 // Use ETF proxies for indices as they are reliably available on free tier
 const INDICES = [
-    { name: 'S&P 500', symbol: 'SPY' },
-    { name: 'NASDAQ', symbol: 'QQQ' },
-    { name: 'DOW', symbol: 'DIA' },
+    { name: 'S&P 500 (SPY)', symbol: 'SPY' },
+    { name: 'NASDAQ (QQQ)', symbol: 'QQQ' },
+    { name: 'DOW (DIA)', symbol: 'DIA' },
 ];
 
 function IndexRow({ item }: { item: { name: string; symbol: string } }) {
