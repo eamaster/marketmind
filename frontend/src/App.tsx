@@ -93,15 +93,6 @@ function AppContent() {
 
           {/* Chat Panel */}
           <div className="fixed right-0 top-[65px] bottom-0 w-full sm:w-96 bg-slate-900 shadow-2xl z-50 transform transition-transform duration-300 ease-out border-l border-slate-800">
-            {/* Close Button */}
-            <button
-              onClick={() => setIsChatOpen(false)}
-              className="absolute top-4 right-4 z-10 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors"
-              aria-label="Close AI chat"
-            >
-              <X size={20} />
-            </button>
-
             {/* AI Chat Panel Content */}
             <div className="h-full">
               <AiChatPanel
@@ -113,6 +104,7 @@ function AppContent() {
                   symbol: aiContext.symbol,
                   timeframe: aiContext.timeframe,
                 }}
+                onClose={() => setIsChatOpen(false)}
               />
             </div>
           </div>

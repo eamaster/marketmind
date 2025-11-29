@@ -1,16 +1,10 @@
 import { useEffect, useRef } from 'react';
-import { Paperclip, Mic, Send } from 'lucide-react';
+import { Paperclip, Mic, Send, X } from 'lucide-react';
 import type { ChatMessage } from '../../services/types';
 
 interface AiChatPanelProps {
     messages: ChatMessage[];
-    onSendQuestion: (question: string) => void;
-    isLoading: boolean;
-    currentContext: {
-        assetType: string;
-        symbol: string;
-        timeframe: string;
-    };
+    onClose: () => void;
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -25,6 +19,7 @@ export function AiChatPanel({
     onSendQuestion,
     isLoading,
     currentContext,
+    onClose,
 }: AiChatPanelProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -50,18 +45,30 @@ export function AiChatPanel({
         >
             {/* GRADIENT HEADER */}
             <div className="bg-gradient-to-r from-blue-600 to-cyan-500 p-4 border-b border-slate-700">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                        <h2 className="text-lg font-semibold text-white flex items-center gap-2 truncate">
                             🤖 AI Market Analyst
                         </h2>
-                        <p className="text-xs text-blue-100 mt-0.5">
+                        <p className="text-xs text-blue-100 mt-0.5 truncate">
                             Powered by Google Gemini
                         </p>
                     </div>
-                    {/* Context Badge */}
-                    <div className="px-3 py-1 rounded-full bg-white/20 backdrop-blur text-xs font-medium text-white">
-                        📊 {currentContext.symbol} · {currentContext.timeframe}
+
+                    <div className="flex items-center gap-2 shrink-0">
+                        {/* Context Badge */}
+                        <div className="hidden sm:block px-3 py-1 rounded-full bg-white/20 backdrop-blur text-xs font-medium text-white whitespace-nowrap">
+                            📊 {currentContext.symbol} · {currentContext.timeframe}
+                        </div>
+
+                        {/* Close Button */}
+                        <button
+                            onClick={onClose}
+                            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                            aria-label="Close chat"
+                        >
+                            <X size={18} />
+                        </button>
                     </div>
                 </div>
             </div>
@@ -116,8 +123,8 @@ export function AiChatPanel({
                             >
                                 <div
                                     className={`max-w-[85%] rounded-2xl p-3 ${isUser
-                                            ? 'bg-blue-600 text-white rounded-tr-sm'
-                                            : 'bg-gradient-to-br from-slate-800 to-slate-700 text-slate-100 rounded-tl-sm'
+                                        ? 'bg-blue-600 text-white rounded-tr-sm'
+                                        : 'bg-gradient-to-br from-slate-800 to-slate-700 text-slate-100 rounded-tl-sm'
                                         }`}
                                 >
                                     {/* Message Header */}
