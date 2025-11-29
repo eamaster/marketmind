@@ -38,7 +38,25 @@ function WatchlistRow({ item, onClick }: { item: { symbol: string; name: string 
     }
 
     if (isError || !data) {
-        return null; // Skip if error
+        return (
+            <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors text-left group opacity-70">
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-mono font-medium text-slate-700 dark:text-slate-300">
+                            {item.symbol}
+                        </span>
+                        <span className="text-xs text-slate-500 truncate hidden sm:block">
+                            {item.name}
+                        </span>
+                    </div>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                    <div className="font-mono text-sm text-slate-500 dark:text-slate-400">
+                        ---
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     const isPositive = data.change >= 0;

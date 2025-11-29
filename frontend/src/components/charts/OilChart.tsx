@@ -238,8 +238,9 @@ export function OilChart({
                     <XAxis
                         dataKey="time"
                         stroke={isDark ? "#64748b" : "#94a3b8"}
-                        tick={{ fontSize: 12, fill: isDark ? "#94a3b8" : "#64748b" }}
+                        tick={{ fontSize: 10, fill: isDark ? "#94a3b8" : "#64748b" }}
                         tickLine={false}
+                        minTickGap={30}
                     />
 
                     {/* Price Y-Axis (Right) */}
@@ -247,9 +248,10 @@ export function OilChart({
                         yAxisId="price"
                         orientation="right"
                         stroke={isDark ? "#64748b" : "#94a3b8"}
-                        tick={{ fontSize: 12, fill: isDark ? "#94a3b8" : "#64748b" }}
+                        tick={{ fontSize: 10, fill: isDark ? "#94a3b8" : "#64748b" }}
                         tickLine={false}
                         domain={['auto', 'auto']}
+                        width={40}
                     />
 
                     {/* Volume Y-Axis (Left, hidden or scaled) */}

@@ -110,30 +110,48 @@ import { MOCK_PRICES } from '../core/constants';
 function getMockStockData(symbol: string, timeframe: Timeframe): PricePoint[] {
     console.log(`[Finnhub] Generating ${timeframe} mock data for ${symbol}`);
 
-    const basePrice = MOCK_PRICES[symbol] || 150.00;
+    const targetPrice = MOCK_PRICES[symbol] || 150.00;
     const points = timeframe === '1D' ? 78 : timeframe === '1W' ? 168 : 30;
     const interval = timeframe === '1D' ? 5 * 60 * 1000 : timeframe === '1W' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
 
     const now = Date.now();
     const data: PricePoint[] = [];
 
+    // Generate a random walk first
+    let currentPrice = targetPrice;
+    const tempPoints: { close: number; open: number; high: number; low: number; volume: number }[] = [];
+
+    // Work backwards from target price
+    for (let i = 0; i < points; i++) {
+        const volatility = (Math.random() - 0.5) * (targetPrice * 0.01);
+        // Reverse trend: if we want upward trend, we subtract it when going backwards
+        const trend = (targetPrice * 0.0005);
+
+        const prevPrice = currentPrice - volatility - trend;
+
+        tempPoints.unshift({
+            close: currentPrice,
+            open: prevPrice,
+            high: Math.max(prevPrice, currentPrice) + Math.random() * (targetPrice * 0.005),
+            low: Math.min(prevPrice, currentPrice) - Math.random() * (targetPrice * 0.005),
+            volume: Math.floor(Math.random() * 1000000) + 500000,
+        });
+
+        currentPrice = prevPrice;
+    }
+
+    // Assign timestamps
     for (let i = 0; i < points; i++) {
         const timestamp = new Date(now - (points - i - 1) * interval).toISOString();
-        const volatility = (Math.random() - 0.5) * (basePrice * 0.02);
-        const trend = i * (basePrice * 0.0005); // Slight upward trend
-        const close = basePrice + volatility + trend;
-
-        const open = close + (Math.random() - 0.5) * (basePrice * 0.01);
-        const high = Math.max(open, close) + Math.random() * (basePrice * 0.01);
-        const low = Math.min(open, close) - Math.random() * (basePrice * 0.01);
+        const p = tempPoints[i];
 
         data.push({
             timestamp,
-            open: Number(open.toFixed(2)),
-            high: Number(high.toFixed(2)),
-            low: Number(low.toFixed(2)),
-            close: Number(close.toFixed(2)),
-            volume: Math.floor(Math.random() * 1000000) + 500000,
+            open: Number(p.open.toFixed(2)),
+            high: Number(p.high.toFixed(2)),
+            low: Number(p.low.toFixed(2)),
+            close: Number(p.close.toFixed(2)),
+            volume: p.volume,
         });
     }
 
@@ -177,10 +195,12 @@ export async function getStockQuote(
 
 function getMockQuote(symbol: string): { price: number; change: number; changePercent: number } {
     const basePrice = MOCK_PRICES[symbol] || 150.00;
-    // Add some random variation so it doesn't look static
-    const volatility = (Math.random() - 0.5) * (basePrice * 0.01);
-    const price = basePrice + volatility;
-    const change = volatility + (Math.random() * 2); // Bias towards positive for demo
+
+    // Return the EXACT base price so it matches the chart's last candle
+    const price = basePrice;
+
+    // Random change for display purposes
+    const change = (Math.random() * 5) * (Math.random() > 0.4 ? 1 : -1);
     const changePercent = (change / basePrice) * 100;
 
     return {

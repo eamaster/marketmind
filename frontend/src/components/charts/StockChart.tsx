@@ -237,8 +237,9 @@ export function StockChart({
                     <XAxis
                         dataKey="time"
                         stroke={isDark ? "#64748b" : "#94a3b8"}
-                        tick={{ fontSize: 12, fill: isDark ? "#94a3b8" : "#64748b" }}
+                        tick={{ fontSize: 10, fill: isDark ? "#94a3b8" : "#64748b" }}
                         tickLine={false}
+                        minTickGap={30}
                     />
 
                     {/* Price Y-Axis (Right) */}
@@ -246,9 +247,10 @@ export function StockChart({
                         yAxisId="price"
                         orientation="right"
                         stroke={isDark ? "#64748b" : "#94a3b8"}
-                        tick={{ fontSize: 12, fill: isDark ? "#94a3b8" : "#64748b" }}
+                        tick={{ fontSize: 10, fill: isDark ? "#94a3b8" : "#64748b" }}
                         tickLine={false}
                         domain={['auto', 'auto']}
+                        width={40}
                     />
 
                     {/* Volume Y-Axis (Left, hidden or scaled) */}
@@ -256,7 +258,7 @@ export function StockChart({
                         yAxisId="volume"
                         orientation="left"
                         hide={true}
-                        domain={[0, 'dataMax * 4']} // Push volume bars to bottom 1/4
+                        domain={[0, 'dataMax * 4']}
                     />
 
                     {/* Support/Resistance Lines */}

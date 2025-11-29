@@ -80,26 +80,44 @@ import { MOCK_PRICES } from '../core/constants';
 function getMockGoldData(symbol: string, timeframe: Timeframe): PricePoint[] {
     console.log(`[GoldAPI] Generating ${timeframe} mock data for ${symbol}`);
 
-    const basePrice = MOCK_PRICES[symbol] || 2050.00;
+    const targetPrice = MOCK_PRICES[symbol] || 2050.00;
     const points = timeframe === '1D' ? 78 : timeframe === '1W' ? 168 : 30;
     const interval = timeframe === '1D' ? 5 * 60 * 1000 : timeframe === '1W' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
 
     const now = Date.now();
     const data: PricePoint[] = [];
 
+    let currentPrice = targetPrice;
+    const tempPoints: { close: number; open: number; high: number; low: number; volume: number }[] = [];
+
+    for (let i = 0; i < points; i++) {
+        const volatility = (Math.random() - 0.5) * (targetPrice * 0.01);
+        const trend = (targetPrice * 0.0005);
+
+        const prevPrice = currentPrice - volatility - trend;
+
+        tempPoints.unshift({
+            close: currentPrice,
+            open: prevPrice,
+            high: Math.max(prevPrice, currentPrice) + Math.random() * 2,
+            low: Math.min(prevPrice, currentPrice) - Math.random() * 2,
+            volume: Math.floor(Math.random() * 500000) + 100000,
+        });
+
+        currentPrice = prevPrice;
+    }
+
     for (let i = 0; i < points; i++) {
         const timestamp = new Date(now - (points - i - 1) * interval).toISOString();
-        const volatility = (Math.random() - 0.5) * (basePrice * 0.01);
-        const trend = i * (basePrice * 0.0005);
-        const close = basePrice + volatility + trend;
+        const p = tempPoints[i];
 
         data.push({
             timestamp,
-            close: Number(close.toFixed(2)),
-            open: Number((close + (Math.random() - 0.5) * 2).toFixed(2)),
-            high: Number((close + Math.random() * 2).toFixed(2)),
-            low: Number((close - Math.random() * 2).toFixed(2)),
-            volume: Math.floor(Math.random() * 500000) + 100000,
+            close: Number(p.close.toFixed(2)),
+            open: Number(p.open.toFixed(2)),
+            high: Number(p.high.toFixed(2)),
+            low: Number(p.low.toFixed(2)),
+            volume: p.volume,
         });
     }
 
