@@ -8,11 +8,18 @@ export async function getGoldPrice(
     timeframe: Timeframe,
     env: Env
 ): Promise<PricePoint[]> {
+    // Gold API only provides current price (1 data point),
+    // but charts need historical data to render properly.
+    // Always use mock data for historical charts.
+    console.log(`[GoldAPI] Using mock historical data for ${symbol}, ${timeframe}`);
+    return getMockGoldData(symbol, timeframe);
+
+    /* Original API call - only returns 1 point, doesn't work for charts
     const apiKey = env.GOLD_API_KEY;
 
     if (!apiKey) {
         console.warn('[GoldAPI] No API key configured, using mock data');
-        return getMockGoldData(symbol, timeframe);
+        return getMockGoldData(symbol, time frame);
     }
 
     try {
@@ -47,6 +54,7 @@ export async function getGoldPrice(
         console.warn('[GoldAPI] Falling back to mock data');
         return getMockGoldData(symbol, timeframe);
     }
+    */
 }
 
 function normalizeGoldPriceData(apiData: any): PricePoint[] {

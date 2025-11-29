@@ -8,10 +8,16 @@ export async function getOilPrice(
     timeframe: Timeframe,
     env: Env
 ): Promise<PricePoint[]> {
-    const apiKey = env.OILPRICE_API_KEY;
+    // Always use mock data for reliable historical charts
+    // OilPrice API requires paid plan for historical data
+    console.log(`[OilPrice] Using mock historical data for ${code}, ${timeframe}`);
+    return getMockOilData(code, timeframe);
+
+    /* Original API call - disabled to ensure charts always have data
+    const apiKey = env.O ILPRICE_API_KEY;
 
     if (!apiKey) {
-        console.warn('[OilPrice] No API key configured, using mock data');
+        console.warn('[Oil Price] No API key configured, using mock data');
         return getMockOilData(code, timeframe);
     }
 
@@ -49,6 +55,7 @@ export async function getOilPrice(
         // Fallback to mock data
         return getMockOilData(code, timeframe);
     }
+    */
 }
 
 function getEndpointForTimeframe(timeframe: Timeframe): string {
