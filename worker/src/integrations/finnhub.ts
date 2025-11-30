@@ -18,48 +18,58 @@ export async function getStockCandles(
     }
 
     try {
-        const { resolution, from, to } = getTimeframeParams(timeframe);
+        // First attempt: Try the requested timeframe
+        return await fetchCandles(symbol, timeframe, apiKey);
+    } catch (error) {
+        // Check if it's a 403 Forbidden error (Plan Limit)
+        const errorMessage = error instanceof Error ? error.message : '';
+        if (errorMessage.includes('403')) {
+            console.warn(`[Finnhub] 403 Forbidden for ${timeframe}. Falling back to Daily resolution (Free Tier compatible).`);
 
-        const url = new URL('https://finnhub.io/api/v1/stock/candle');
-        url.searchParams.set('symbol', symbol);
-        url.searchParams.set('resolution', resolution);
-        url.searchParams.set('from', from.toString());
-        url.searchParams.set('to', to.toString());
-        url.searchParams.set('token', apiKey);
-
-        console.log(`[Finnhub] Fetching ${symbol} candles: ${timeframe} (resolution: ${resolution})`);
-        console.log(`[Finnhub] URL: ${url.toString().replace(apiKey, 'API_KEY')}`);
-
-        const response = await fetch(url.toString());
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('[Finnhub] API error:', response.status, response.statusText, errorText);
-            throw new Error(`Finnhub API error: ${response.status} ${response.statusText} - Body: ${errorText}`);
+            // Fallback: Fetch Daily data for the last month
+            // This ensures Free Tier users still see REAL data instead of an error
+            try {
+                return await fetchCandles(symbol, '1M', apiKey);
+            } catch (fallbackError) {
+                // If even fallback fails, throw the original error with debug info
+                throw enhanceError(error, apiKey);
+            }
         }
 
-        const data = await response.json();
-        console.log(`[Finnhub] Raw API response status:`, data.s);
-        console.log(`[Finnhub] Data points count:`, data.t?.length || 0);
-
-        const normalizedData = normalizeStockData(data);
-        console.log(`[Finnhub] Normalized ${normalizedData.length} candles`);
-
-        return normalizedData;
-    } catch (error) {
-        console.error('[Finnhub] Error fetching data:', error);
-
-        // Add debug info to the error message
-        const keyDebug = apiKey
-            ? `(Key configured: Yes, Length: ${apiKey.length}, Prefix: ${apiKey.substring(0, 4)}...)`
-            : '(Key configured: No)';
-
-        const enhancedError = new Error(`Finnhub API Error: ${error instanceof Error ? error.message : 'Unknown'} ${keyDebug}`);
-
-        // If we have an API key but failed, throw the error.
-        // DO NOT fallback to mock data if the user expects real data.
-        throw enhancedError;
+        // For other errors, throw with debug info
+        throw enhanceError(error, apiKey);
     }
+}
+
+async function fetchCandles(symbol: string, timeframe: Timeframe, apiKey: string): Promise<PricePoint[]> {
+    const { resolution, from, to } = getTimeframeParams(timeframe);
+
+    const url = new URL('https://finnhub.io/api/v1/stock/candle');
+    url.searchParams.set('symbol', symbol);
+    url.searchParams.set('resolution', resolution);
+    url.searchParams.set('from', from.toString());
+    url.searchParams.set('to', to.toString());
+    url.searchParams.set('token', apiKey);
+
+    console.log(`[Finnhub] Fetching ${symbol} candles: ${timeframe} (resolution: ${resolution})`);
+
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Finnhub API error: ${response.status} ${response.statusText} - Body: ${errorText}`);
+    }
+
+    const data = await response.json();
+    return normalizeStockData(data);
+}
+
+function enhanceError(error: any, apiKey: string): Error {
+    const keyDebug = apiKey
+        ? `(Key configured: Yes, Length: ${apiKey.length}, Prefix: ${apiKey.substring(0, 4)}...)`
+        : '(Key configured: No)';
+
+    return new Error(`Finnhub API Error: ${error instanceof Error ? error.message : 'Unknown'} ${keyDebug}`);
 }
 
 function getTimeframeParams(timeframe: Timeframe): { resolution: string; from: number; to: number } {
@@ -68,19 +78,25 @@ function getTimeframeParams(timeframe: Timeframe): { resolution: string; from: n
     switch (timeframe) {
         case '1D':
             return {
-                resolution: '5', // 5-minute intervals
+                resolution: '5', // 5-minute intervals (Paid)
                 from: now - 24 * 60 * 60,
                 to: now,
             };
         case '1W':
             return {
-                resolution: '60', // 1-hour intervals
+                resolution: '60', // 1-hour intervals (Paid)
                 from: now - 7 * 24 * 60 * 60,
                 to: now,
             };
         case '1M':
             return {
-                resolution: 'D', // Daily intervals
+                resolution: 'D', // Daily intervals (Free)
+                from: now - 30 * 24 * 60 * 60,
+                to: now,
+            };
+        default: // Fallback to daily
+            return {
+                resolution: 'D',
                 from: now - 30 * 24 * 60 * 60,
                 to: now,
             };
@@ -99,7 +115,6 @@ function normalizeStockData(apiData: any): PricePoint[] {
         return [];
     }
 
-    console.log(`[Finnhub] Processing ${apiData.t.length} candles`);
     const data: PricePoint[] = [];
 
     for (let i = 0; i < apiData.t.length; i++) {
@@ -110,62 +125,6 @@ function normalizeStockData(apiData: any): PricePoint[] {
             low: apiData.l?.[i],
             close: apiData.c[i],
             volume: apiData.v?.[i],
-        });
-    }
-
-    return data;
-}
-
-function getMockStockData(symbol: string, timeframe: Timeframe): PricePoint[] {
-    console.log(`[Finnhub] Generating ${timeframe} mock data for ${symbol}`);
-
-    const targetPrice = MOCK_PRICES[symbol] || 150.00;
-    const points = timeframe === '1D' ? 78 : timeframe === '1W' ? 168 : 30;
-    const interval = timeframe === '1D' ? 5 * 60 * 1000 : timeframe === '1W' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-
-    const now = Date.now();
-    // Use current hour as seed to ensure consistency across reloads/environments for the same hour
-    const timeBlock = Math.floor(now / (1000 * 60 * 60));
-    const seed = generateSeed(symbol + timeframe, timeBlock);
-    const rng = seededRandom(seed);
-
-    const data: PricePoint[] = [];
-
-    // Generate a random walk first
-    let currentPrice = targetPrice;
-    const tempPoints: { close: number; open: number; high: number; low: number; volume: number }[] = [];
-
-    // Work backwards from target price
-    for (let i = 0; i < points; i++) {
-        const volatility = (rng() - 0.5) * (targetPrice * 0.01);
-        // Reverse trend: if we want upward trend, we subtract it when going backwards
-        const trend = (targetPrice * 0.0005);
-
-        const prevPrice = currentPrice - volatility - trend;
-
-        tempPoints.unshift({
-            close: currentPrice,
-            open: prevPrice,
-            high: Math.max(prevPrice, currentPrice) + rng() * (targetPrice * 0.005),
-            low: Math.min(prevPrice, currentPrice) - rng() * (targetPrice * 0.005),
-            volume: Math.floor(rng() * 1000000) + 500000,
-        });
-
-        currentPrice = prevPrice;
-    }
-
-    // Assign timestamps
-    for (let i = 0; i < points; i++) {
-        const timestamp = new Date(now - (points - i - 1) * interval).toISOString();
-        const p = tempPoints[i];
-
-        data.push({
-            timestamp,
-            open: Number(p.open.toFixed(2)),
-            high: Number(p.high.toFixed(2)),
-            low: Number(p.low.toFixed(2)),
-            close: Number(p.close.toFixed(2)),
-            volume: p.volume,
         });
     }
 
@@ -204,33 +163,65 @@ export async function getStockQuote(
         };
     } catch (error) {
         console.error('[Finnhub] Error fetching quote:', error);
-
-        // Add debug info to the error message
-        const keyDebug = apiKey
-            ? `(Key configured: Yes, Length: ${apiKey.length}, Prefix: ${apiKey.substring(0, 4)}...)`
-            : '(Key configured: No)';
-
-        const enhancedError = new Error(`Finnhub API Error: ${error instanceof Error ? error.message : 'Unknown'} ${keyDebug}`);
-
-        // If we have an API key but failed, throw the error so the user knows something is wrong
-        // instead of showing fake data.
-        throw enhancedError;
+        throw enhanceError(error, apiKey);
     }
+}
+
+function getMockStockData(symbol: string, timeframe: Timeframe): PricePoint[] {
+    console.log(`[Finnhub] Generating ${timeframe} mock data for ${symbol}`);
+
+    const targetPrice = MOCK_PRICES[symbol] || 150.00;
+    const points = timeframe === '1D' ? 78 : timeframe === '1W' ? 168 : 30;
+    const interval = timeframe === '1D' ? 5 * 60 * 1000 : timeframe === '1W' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+
+    const now = Date.now();
+    const timeBlock = Math.floor(now / (1000 * 60 * 60));
+    const seed = generateSeed(symbol + timeframe, timeBlock);
+    const rng = seededRandom(seed);
+
+    const data: PricePoint[] = [];
+    let currentPrice = targetPrice;
+    const tempPoints: { close: number; open: number; high: number; low: number; volume: number }[] = [];
+
+    for (let i = 0; i < points; i++) {
+        const volatility = (rng() - 0.5) * (targetPrice * 0.01);
+        const trend = (targetPrice * 0.0005);
+        const prevPrice = currentPrice - volatility - trend;
+
+        tempPoints.unshift({
+            close: currentPrice,
+            open: prevPrice,
+            high: Math.max(prevPrice, currentPrice) + rng() * (targetPrice * 0.005),
+            low: Math.min(prevPrice, currentPrice) - rng() * (targetPrice * 0.005),
+            volume: Math.floor(rng() * 1000000) + 500000,
+        });
+
+        currentPrice = prevPrice;
+    }
+
+    for (let i = 0; i < points; i++) {
+        const timestamp = new Date(now - (points - i - 1) * interval).toISOString();
+        const p = tempPoints[i];
+        data.push({
+            timestamp,
+            open: Number(p.open.toFixed(2)),
+            high: Number(p.high.toFixed(2)),
+            low: Number(p.low.toFixed(2)),
+            close: Number(p.close.toFixed(2)),
+            volume: p.volume,
+        });
+    }
+
+    return data;
 }
 
 function getMockQuote(symbol: string): { price: number; change: number; changePercent: number } {
     const basePrice = MOCK_PRICES[symbol] || 150.00;
-
-    // Use seeded random for consistent daily change
     const now = Date.now();
-    const timeBlock = Math.floor(now / (1000 * 60 * 60)); // Hourly consistency
+    const timeBlock = Math.floor(now / (1000 * 60 * 60));
     const seed = generateSeed(symbol + 'quote', timeBlock);
     const rng = seededRandom(seed);
-
-    // Return the EXACT base price so it matches the chart's last candle
     const price = basePrice;
-
-    // Random change for display purposes (balanced 50/50 chance of gain/loss)
     const change = (rng() * 5) * (rng() > 0.5 ? 1 : -1);
     const changePercent = (change / basePrice) * 100;
 
