@@ -119,6 +119,7 @@ function normalizeOilPriceData(apiData: any, code: string, timeframe: Timeframe)
 }
 
 import { MOCK_PRICES } from '../core/constants';
+import { seededRandom, generateSeed } from '../core/random';
 
 function getMockOilData(code: string, timeframe: Timeframe): PricePoint[] {
     console.log(`[OilPrice] Generating ${timeframe} mock data for ${code}`);
@@ -128,13 +129,17 @@ function getMockOilData(code: string, timeframe: Timeframe): PricePoint[] {
     const interval = timeframe === '1D' ? 5 * 60 * 1000 : timeframe === '1W' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
 
     const now = Date.now();
+    const timeBlock = Math.floor(now / (1000 * 60 * 60));
+    const seed = generateSeed(code + timeframe, timeBlock);
+    const rng = seededRandom(seed);
+
     const data: PricePoint[] = [];
 
     let currentPrice = targetPrice;
     const tempPoints: { close: number; open: number; high: number; low: number; volume: number }[] = [];
 
     for (let i = 0; i < points; i++) {
-        const volatility = (Math.random() - 0.5) * (targetPrice * 0.02);
+        const volatility = (rng() - 0.5) * (targetPrice * 0.02);
         const trend = (targetPrice * 0.0005);
 
         const prevPrice = currentPrice - volatility - trend;
@@ -142,9 +147,9 @@ function getMockOilData(code: string, timeframe: Timeframe): PricePoint[] {
         tempPoints.unshift({
             close: currentPrice,
             open: prevPrice,
-            high: Math.max(prevPrice, currentPrice) + Math.random() * 0.5,
-            low: Math.min(prevPrice, currentPrice) - Math.random() * 0.5,
-            volume: Math.floor(Math.random() * 1000000) + 500000,
+            high: Math.max(prevPrice, currentPrice) + rng() * 0.5,
+            low: Math.min(prevPrice, currentPrice) - rng() * 0.5,
+            volume: Math.floor(rng() * 1000000) + 500000,
         });
 
         currentPrice = prevPrice;

@@ -76,6 +76,7 @@ function normalizeGoldPriceData(apiData: any): PricePoint[] {
 }
 
 import { MOCK_PRICES } from '../core/constants';
+import { seededRandom, generateSeed } from '../core/random';
 
 function getMockGoldData(symbol: string, timeframe: Timeframe): PricePoint[] {
     console.log(`[GoldAPI] Generating ${timeframe} mock data for ${symbol}`);
@@ -85,13 +86,17 @@ function getMockGoldData(symbol: string, timeframe: Timeframe): PricePoint[] {
     const interval = timeframe === '1D' ? 5 * 60 * 1000 : timeframe === '1W' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
 
     const now = Date.now();
+    const timeBlock = Math.floor(now / (1000 * 60 * 60));
+    const seed = generateSeed(symbol + timeframe, timeBlock);
+    const rng = seededRandom(seed);
+
     const data: PricePoint[] = [];
 
     let currentPrice = targetPrice;
     const tempPoints: { close: number; open: number; high: number; low: number; volume: number }[] = [];
 
     for (let i = 0; i < points; i++) {
-        const volatility = (Math.random() - 0.5) * (targetPrice * 0.01);
+        const volatility = (rng() - 0.5) * (targetPrice * 0.01);
         const trend = (targetPrice * 0.0005);
 
         const prevPrice = currentPrice - volatility - trend;
@@ -99,9 +104,9 @@ function getMockGoldData(symbol: string, timeframe: Timeframe): PricePoint[] {
         tempPoints.unshift({
             close: currentPrice,
             open: prevPrice,
-            high: Math.max(prevPrice, currentPrice) + Math.random() * 2,
-            low: Math.min(prevPrice, currentPrice) - Math.random() * 2,
-            volume: Math.floor(Math.random() * 500000) + 100000,
+            high: Math.max(prevPrice, currentPrice) + rng() * 2,
+            low: Math.min(prevPrice, currentPrice) - rng() * 2,
+            volume: Math.floor(rng() * 500000) + 100000,
         });
 
         currentPrice = prevPrice;
