@@ -173,7 +173,7 @@ The frontend is configured to deploy to GitHub Pages using GitHub Actions.
 **Automatic Deployment:**
 - Push to `main` branch triggers automatic deployment
 - GitHub Actions workflow builds and deploys to `gh-pages` branch
-- Live at: https://smah0085.github.io/marketmind
+- Live at: https://eamaster.github.io/marketmind
 
 **Manual Deployment:**
 ```bash
