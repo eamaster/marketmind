@@ -46,9 +46,17 @@ export async function getStockCandles(
         return normalizedData;
     } catch (error) {
         console.error('[Finnhub] Error fetching data:', error);
+
+        // Add debug info to the error message
+        const keyDebug = apiKey
+            ? `(Key configured: Yes, Length: ${apiKey.length}, Prefix: ${apiKey.substring(0, 4)}...)`
+            : '(Key configured: No)';
+
+        const enhancedError = new Error(`Finnhub API Error: ${error instanceof Error ? error.message : 'Unknown'} ${keyDebug}`);
+
         // If we have an API key but failed, throw the error.
         // DO NOT fallback to mock data if the user expects real data.
-        throw error;
+        throw enhancedError;
     }
 }
 
@@ -196,9 +204,17 @@ export async function getStockQuote(
         };
     } catch (error) {
         console.error('[Finnhub] Error fetching quote:', error);
+
+        // Add debug info to the error message
+        const keyDebug = apiKey
+            ? `(Key configured: Yes, Length: ${apiKey.length}, Prefix: ${apiKey.substring(0, 4)}...)`
+            : '(Key configured: No)';
+
+        const enhancedError = new Error(`Finnhub API Error: ${error instanceof Error ? error.message : 'Unknown'} ${keyDebug}`);
+
         // If we have an API key but failed, throw the error so the user knows something is wrong
         // instead of showing fake data.
-        throw error;
+        throw enhancedError;
     }
 }
 

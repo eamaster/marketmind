@@ -38,8 +38,18 @@ async function fetchApi<T>(
         });
 
         if (!response.ok) {
+            let errorMessage = response.statusText;
+            try {
+                const errorBody = await response.json();
+                if (errorBody.message) {
+                    errorMessage = errorBody.message;
+                }
+            } catch (e) {
+                // Ignore JSON parse error, stick with statusText
+            }
+
             throw new ApiError(
-                `API request failed: ${response.statusText}`,
+                `API request failed: ${errorMessage}`,
                 response.status,
                 response.statusText
             );
