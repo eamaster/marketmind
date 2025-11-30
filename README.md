@@ -2,7 +2,7 @@
 
 A real-time financial analytics platform with AI-powered market insights. Track stocks, commodities, and precious metals with live data, interactive charts, and intelligent sentiment analysis.
 
-**🌐 Live Demo:** [https://smah0085.github.io/marketmind](https://smah0085.github.io/marketmind)
+**🌐 Live Demo:** [https://eamaster.github.io/marketmind](https://eamaster.github.io/marketmind)
 
 ---
 
