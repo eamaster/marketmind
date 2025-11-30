@@ -28,6 +28,9 @@ export function MainLayout({
             {/* Top Navbar */}
             <Navbar onMenuClick={() => setIsMobileSidebarOpen(true)} />
 
+            {/* News Ticker (Top Bar) */}
+            {bottomBar}
+
             {/* Main Content Area */}
             <div className="flex-1 flex overflow-hidden relative">
                 {/* Left Sidebar - Now handles its own responsive visibility */}
@@ -44,8 +47,7 @@ export function MainLayout({
                 </main>
             </div>
 
-            {/* Bottom Bar (News Ticker) */}
-            {bottomBar}
         </div>
+
     );
 }
