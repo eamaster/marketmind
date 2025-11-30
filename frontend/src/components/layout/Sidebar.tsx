@@ -84,7 +84,7 @@ export function Sidebar({
             <aside
                 className={`
                     fixed xl:relative z-50 xl:z-0 h-full
-                    bg-white/95 dark:bg-slate-900/95 xl:bg-white/50 xl:dark:bg-slate-900/50 
+                    bg-white/95 dark:bg-slate-950/95 xl:bg-white/50 xl:dark:bg-slate-950/50 
                     border-r border-slate-200 dark:border-slate-800 
                     transition-all duration-300 ease-in-out
                     ${className}

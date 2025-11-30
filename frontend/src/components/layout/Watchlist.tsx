@@ -118,7 +118,7 @@ export function Watchlist({ onSymbolClick }: WatchlistProps) {
             </button>
 
             {isExpanded && (
-                <div className="space-y-1 max-h-[400px] overflow-y-auto scrollbar-thin" role="list">
+                <div className="space-y-1 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent" role="list">
                     {WATCHLIST_ITEMS.map((item) => (
                         <WatchlistRow
                             key={item.symbol}
