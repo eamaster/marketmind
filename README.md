@@ -1,191 +1,347 @@
-# MarketMind Financial Intelligence Platform
+# MarketMind 📈
 
-A production-grade real-time financial analytics web application with AI-powered market insights.
+A real-time financial analytics platform with AI-powered market insights. Track stocks, commodities, and precious metals with live data, interactive charts, and intelligent sentiment analysis.
 
-## 🎯 Features
+**🌐 Live Demo:** [https://smah0085.github.io/marketmind](https://smah0085.github.io/marketmind)
 
-- **Real-time Market Data**: Live prices for stocks, oil, and precious metals
-- **Interactive Charts**: Line charts with Recharts for all asset types
-- **Sentiment Analysis**: Bull/bear indicators from news sentiment
-- **AI Market Analyst**: Context-aware AI powered by Google Gemini
+---
 
- - **Multi-Asset Support**:
-  - 📈 Stocks (AAPL, TSLA, NVDA, MSFT, GOOGL, AMZN, META)
-  - 🛢️ Oil (WTI Crude, Brent Crude)
-  - 💰 Precious Metals (Gold, Silver)
+## ✨ Features
+
+### 📊 Real-Time Market Data
+- **Stocks**: AAPL, TSLA, NVDA, MSFT, GOOGL, AMZN, META
+- **Oil & Energy**: WTI Crude, Brent Crude
+- **Precious Metals**: Gold (XAU), Silver (XAG)
+
+### 🤖 AI-Powered Analysis
+- Context-aware market analysis using **Google Gemini 3 Pro Preview**
+- Ask questions about market trends, price movements, and sentiment
+- Real-time AI insights based on current data and news
+
+### 📰 News & Sentiment
+- Aggregated financial news from multiple sources
+- Bull/Bear sentiment indicators
+- Real-time sentiment scoring
+
+### 📈 Interactive Visualizations
+- Beautiful, responsive charts powered by Recharts
+- Multiple timeframes: 1 Day, 1 Week, 1 Month
+- OHLC data with volume indicators
+
+---
 
 ## 🏗️ Architecture
 
 ```
+Frontend (React + Vite + TailwindCSS)
+          ↓
+     API Requests
+          ↓
+Cloudflare Worker (BFF Layer)
+          ↓
+    External APIs
+    ├── Finnhub (Stocks)
+    ├── Marketaux (News)
+    ├── OilPriceAPI (Energy)
+    ├── Gold API (Metals)
+    └── Google Gemini (AI)
+```
+
+### Project Structure
+
+```
 marketmind/
-├── frontend/          # React + Vite + TailwindCSS SPA
+├── frontend/               # React SPA
 │   ├── src/
-│   │   ├── components/  # UI components
-│   │   ├── hooks/       # Custom React hooks
-│   │   ├── pages/       # Dashboard page
-│   │   ├── services/    # API client
-│   │   └── config/      # Assets configuration
+│   │   ├── components/    # UI Components
+│   │   │   ├── ai/       # AI chat components
+│   │   │   ├── charts/   # Chart visualizations
+│   │   │   ├── layout/   # Layout components
+│   │   │   └── shared/   # Shared UI elements
+│   │   ├── hooks/        # Custom React hooks
+│   │   ├── pages/        # Page components
+│   │   ├── services/     # API client
+│   │   └── config/       # Asset configurations
 │   └── package.json
-├── worker/            # Cloudflare Worker BFF
+│
+├── worker/                # Cloudflare Worker
 │   ├── src/
-│   │   ├── routes/      # API endpoints
+│   │   ├── routes/       # API endpoints
+│   │   │   ├── stocks.ts
+│   │   │   ├── oil.ts
+│   │   │   ├── gold.ts
+│   │   │   ├── news.ts
+│   │   │   ├── quote.ts
+│   │   │   └── aiAnalyze.ts
 │   │   ├── integrations/ # External API clients
-│   │   └── core/        # Utilities (cache, prompt builder)
+│   │   │   ├── finnhub.ts
+│   │   │   ├── oilprice.ts
+│   │   │   ├── goldApi.ts
+│   │   │   ├── marketaux.ts
+│   │   │   └── gemini.ts
+│   │   └── core/         # Shared utilities
 │   └── wrangler.toml
+│
 └── README.md
 ```
+
+---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ and npm
-- Cloudflare account (for Worker deployment)
-- API keys for:
-  - OilPriceAPI
-  - Gold API
-  - Finnhub
-  - Marketaux
-  - Google Gemini
+- **Node.js** 18+ and npm
+- **Cloudflare account** (for Worker deployment)
+- **API Keys** (optional for development, required for production):
+  - [Finnhub](https://finnhub.io/) - Stock market data
+  - [Marketaux](https://www.marketaux.com/) - Financial news
+  - [OilPriceAPI](https://www.oilpriceapi.com/) - Energy commodities
+  - [Gold API](https://www.goldapi.io/) - Precious metals
+  - [Google AI Studio](https://aistudio.google.com/app/apikey) - Gemini API
 
-### Local Development
+> **Note:** The application includes mock data fallback for all APIs. You can run it locally without API keys for development and testing.
 
-**1. Install Dependencies**
+---
+
+### 🛠️ Local Development
+
+#### 1. Clone the Repository
 
 ```bash
-# Frontend
+git clone https://github.com/eamaster/marketmind.git
+cd marketmind
+```
+
+#### 2. Install Dependencies
+
+```bash
+# Install frontend dependencies
 cd frontend
 npm install
 
-# Worker
+# Install worker dependencies
 cd ../worker
 npm install
 ```
 
-**2. Configure Environment Variables**
+#### 3. Configure API Keys (Optional)
 
-Create a `.dev.vars` file in the `worker/` directory:
+Create `worker/.dev.vars` file for local development:
 
 ```env
-OILPRICE_API_KEY=your_oilprice_api_key
-GOLD_API_KEY=your_gold_api_key
+# Optional - app will use mock data if not provided
 FINNHUB_API_KEY=your_finnhub_api_key
 MARKETAUX_API_TOKEN=your_marketaux_token
+OILPRICE_API_KEY=your_oilprice_api_key
+GOLD_API_KEY=your_gold_api_key
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
-> **Note**: If API keys are not configured, the application will use mock data for development.
+> **Important:** The `.dev.vars` file is gitignored and should never be committed to version control.
 
-**3. Start Development Servers**
+#### 4. Start Development Servers
 
-Terminal 1 - Worker:
+**Terminal 1 - Start Worker:**
 ```bash
 cd worker
 npm run dev
+# Worker runs on http://localhost:8787
 ```
 
-Terminal 2 - Frontend:
+**Terminal 2 - Start Frontend:**
 ```bash
 cd frontend
 npm run dev
+# Frontend runs on http://localhost:5173
 ```
 
-The frontend will proxy API requests to the Worker at `http://localhost:8787`.
+The frontend automatically proxies `/api` requests to the worker during development.
 
-**4. Open Browser**
+#### 5. Open in Browser
 
-Visit `http://localhost:5173` to see the application.
-
-## 📦 Deployment
-
-### Frontend (GitHub Pages)
-
-```bash
-cd frontend
-npm run build
-
-# Deploy the dist/ folder to GitHub Pages
-# Configure repository settings to serve from /docs or gh-pages branch
-```
-
-Update `vite.config.ts` base path to match your repository name.
-
-### Worker (Cloudflare)
-
-```bash
-cd worker
-
-# Configure secrets (one-time setup)
-wrangler secret put OILPRICE_API_KEY
-wrangler secret put GOLD_API_KEY
-wrangler secret put FINNHUB_API_KEY
-wrangler secret put MARKETAUX_API_TOKEN
-wrangler secret put GEMINI_API_KEY
-
-# Deploy
-npm run deploy
-```
-
-Update the frontend `apiClient.ts` to use your deployed Worker URL in production.
-
-## 🧪 Testing
-
-```bash
-# Type checking
-cd frontend && npm run type-check
-cd ../worker && npm run type-check
-
-# Build verification
-cd frontend && npm run build
-```
-
-## 🔑 API Integration Notes
-
-### Mock Data Fallback
-
-All API integrations include mock data fallbacks for development. Configure real API keys for production deployment.
-
-### Rate Limiting
-
-- **Marketaux**: 100 requests/day (free tier) - cached for 30 minutes
-- **Other APIs**: Refer to respective documentation for limits
-
-### Gemini Model
-
-Currently using `gemini-1.5-pro`. Update `worker/src/integrations/gemini.ts` to switch models.
-
-## 📱 Mobile Responsiveness
-
-The dashboard is optimized for desktop. Mobile optimizations are in progress (refer to task.md).
-
-## 🛠️ Tech Stack
-
-**Frontend:**
-- React 18
-- Vite
-- TypeScript
-- TailwindCSS
-- Recharts
-
-**Backend:**
-- Cloudflare Workers
-- TypeScript
-
- **APIs:**
-- OilPriceAPI
-- Gold API
-- Finnhub
-- Marketaux
-- Google Gemini
-
-## 📄 License
-
-MIT
-
-## 🤝 Contributing
-
-This is a production-grade project. Contributions are welcome via pull requests.
+Visit **http://localhost:5173** to see the application.
 
 ---
 
-**MarketMind** - Real-time financial intelligence at your fingertips.
+## 📦 Deployment
+
+### Frontend → GitHub Pages
+
+The frontend is configured to deploy to GitHub Pages using GitHub Actions.
+
+**Automatic Deployment:**
+- Push to `main` branch triggers automatic deployment
+- GitHub Actions workflow builds and deploys to `gh-pages` branch
+- Live at: https://smah0085.github.io/marketmind
+
+**Manual Deployment:**
+```bash
+cd frontend
+npm run build
+npm run deploy
+```
+
+**Configuration:**
+- Base path is set in `vite.config.ts`: `base: '/marketmind/'`
+- Production API URL: `https://marketmind-worker.smah0085.workers.dev/api`
+
+### Worker → Cloudflare
+
+**One-Time Setup - Configure Secrets:**
+```bash
+cd worker
+
+# Set production API keys as Cloudflare secrets
+wrangler secret put FINNHUB_API_KEY
+wrangler secret put MARKETAUX_API_TOKEN
+wrangler secret put OILPRICE_API_KEY
+wrangler secret put GOLD_API_KEY
+wrangler secret put GEMINI_API_KEY
+```
+
+**Deploy Worker:**
+```bash
+npm run deploy
+# or
+wrangler deploy
+```
+
+**Deployed at:** https://marketmind-worker.smah0085.workers.dev
+
+---
+
+## 🧪 Testing & Verification
+
+### Type Checking
+```bash
+# Frontend
+cd frontend && npm run type-check
+
+# Worker
+cd worker && npm run type-check
+```
+
+### Build Verification
+```bash
+# Build frontend
+cd frontend && npm run build
+
+# Test production build locally
+npm run preview
+```
+
+### Linting
+```bash
+cd frontend && npm run lint
+```
+
+---
+
+## 🔑 API Integration Details
+
+### Finnhub (Stock Data)
+- **Endpoint:** Stock candles and quotes
+- **Free Tier:** Limited to daily resolution
+- **Fallback:** Mock data with realistic price generation
+- **Rate Limit:** 60 calls/minute (free tier)
+
+### Marketaux (Financial News)
+- **Endpoint:** News articles with sentiment scores
+- **Free Tier:** 100 requests/day
+- **Cache:** 30 minutes server-side caching
+- **Fallback:** Mock news articles
+
+### OilPriceAPI (Energy Commodities)
+- **Endpoint:** Oil prices (WTI, Brent)
+- **Note:** Currently using mock data (API requires paid plan for historical data)
+- **Fallback:** Realistic mock data generation
+
+### Gold API (Precious Metals)
+- **Endpoint:** Gold and Silver prices
+- **Note:** API provides current price only
+- **Fallback:** Mock historical data for charts
+
+### Google Gemini (AI Analysis)
+- **Model:** `gemini-3-pro-preview`
+- **Features:** Context-aware market analysis
+- **Input:** Chart data, news articles, and user questions
+- **Output:** Markdown-formatted AI insights
+- **Fallback:** Template-based mock responses
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework:** React 19
+- **Build Tool:** Vite 7
+- **Language:** TypeScript
+- **Styling:** TailwindCSS 3
+- **Charts:** Recharts 3
+- **State Management:** TanStack Query (React Query)
+- **UI Components:** Headless UI, Lucide React
+
+### Backend (Worker)
+- **Runtime:** Cloudflare Workers
+- **Language:** TypeScript
+- **Framework:** Custom routing with Hono-like patterns
+
+### DevOps
+- **CI/CD:** GitHub Actions
+- **Frontend Hosting:** GitHub Pages
+- **Worker Hosting:** Cloudflare Workers
+- **Package Manager:** npm
+
+---
+
+## 📱 Browser Support
+
+- ✅ Chrome/Edge (recommended)
+- ✅ Firefox
+- ✅ Safari
+- ⚠️ Mobile responsive (optimized for desktop, mobile improvements in progress)
+
+---
+
+## 🔒 Security
+
+- ✅ No API keys in frontend code
+- ✅ All sensitive keys stored in Cloudflare Worker secrets
+- ✅ `.dev.vars` properly gitignored
+- ✅ CORS configured for production endpoints
+- ✅ Git history cleaned of any past API key exposure
+
+---
+
+## 📄 License
+
+MIT License - see LICENSE file for details
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+### Development Workflow
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly (type-check + build)
+5. Submit a pull request
+
+---
+
+## 🙏 Acknowledgments
+
+- Market data provided by Finnhub, Marketaux, OilPriceAPI, and Gold API
+- AI powered by Google Gemini
+- Charts by Recharts
+- Hosted on Cloudflare Workers and GitHub Pages
+
+---
+
+**MarketMind** - Real-time financial intelligence at your fingertips 📊✨
+
+For questions or issues, please open an issue on GitHub.
