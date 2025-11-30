@@ -46,8 +46,9 @@ export async function getStockCandles(
         return normalizedData;
     } catch (error) {
         console.error('[Finnhub] Error fetching data:', error);
-        console.warn('[Finnhub] Falling back to mock data');
-        return getMockStockData(symbol, timeframe);
+        // If we have an API key but failed, throw the error.
+        // DO NOT fallback to mock data if the user expects real data.
+        throw error;
     }
 }
 
@@ -195,7 +196,9 @@ export async function getStockQuote(
         };
     } catch (error) {
         console.error('[Finnhub] Error fetching quote:', error);
-        return getMockQuote(symbol);
+        // If we have an API key but failed, throw the error so the user knows something is wrong
+        // instead of showing fake data.
+        throw error;
     }
 }
 

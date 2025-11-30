@@ -29,13 +29,22 @@ export async function handleStocksRequest(
             },
         });
     } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        let status = 500;
+
+        if (errorMessage.includes('429')) {
+            status = 429;
+        } else if (errorMessage.includes('401') || errorMessage.includes('403')) {
+            status = 401;
+        }
+
         return new Response(
             JSON.stringify({
                 error: 'Failed to fetch stock data',
-                message: error instanceof Error ? error.message : 'Unknown error',
+                message: errorMessage,
             }),
             {
-                status: 500,
+                status,
                 headers: {
                     'Content-Type': 'application/json',
                     ...corsHeaders,
