@@ -1,20 +1,20 @@
 export const MOCK_PRICES: Record<string, number> = {
-    // Stocks (Updated to match user's view)
-    'AAPL': 278.85,
-    'TSLA': 430.17,
-    'NVDA': 880.15,
-    'MSFT': 492.01,
-    'GOOGL': 320.18,
-    'AMZN': 185.60,
-    'META': 490.50,
+    // Stocks (Updated to match real-world prices Nov 2025)
+    'AAPL': 278.34,
+    'TSLA': 430.20,
+    'NVDA': 176.63,
+    'MSFT': 491.74,
+    'GOOGL': 320.57,
+    'AMZN': 233.15,
+    'META': 647.20,
     'BRK.B': 513.81,
     'JPM': 313.08,
     'XOM': 115.92,
     'GLD': 387.88,
     'SLV': 51.21,
-    'SPY': 520.30,
-    'QQQ': 450.20,
-    'DIA': 390.10,
+    'SPY': 683.39, // Updated based on screenshot context (S&P 500 ~6800?)
+    'QQQ': 619.25,
+    'DIA': 477.18,
 
     // Commodities
     'WTI_USD': 76.83,
@@ -22,8 +22,8 @@ export const MOCK_PRICES: Record<string, number> = {
     'NATURAL_GAS': 2.50,
 
     // Metals
-    'XAU': 2061.70,
-    'XAG': 23.50,
+    'XAU': 2650.00, // Updated estimate for 2025
+    'XAG': 31.50,
     'XPT': 950.00,
     'XPD': 1050.00,
 };

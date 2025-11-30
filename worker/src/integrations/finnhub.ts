@@ -202,11 +202,17 @@ export async function getStockQuote(
 function getMockQuote(symbol: string): { price: number; change: number; changePercent: number } {
     const basePrice = MOCK_PRICES[symbol] || 150.00;
 
+    // Use seeded random for consistent daily change
+    const now = Date.now();
+    const timeBlock = Math.floor(now / (1000 * 60 * 60)); // Hourly consistency
+    const seed = generateSeed(symbol + 'quote', timeBlock);
+    const rng = seededRandom(seed);
+
     // Return the EXACT base price so it matches the chart's last candle
     const price = basePrice;
 
-    // Random change for display purposes
-    const change = (Math.random() * 5) * (Math.random() > 0.4 ? 1 : -1);
+    // Random change for display purposes (balanced 50/50 chance of gain/loss)
+    const change = (rng() * 5) * (rng() > 0.5 ? 1 : -1);
     const changePercent = (change / basePrice) * 100;
 
     return {
