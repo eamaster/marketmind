@@ -64,7 +64,7 @@ export function AiChatPanel({
 
                     <div className="flex items-center gap-2 shrink-0">
                         {/* Context Badge */}
-                        <div className="hidden sm:block px-3 py-1 rounded-full bg-white/20 backdrop-blur text-xs font-medium text-white whitespace-nowrap">
+                        <div className="px-3 py-1 rounded-full bg-white/20 backdrop-blur text-xs font-medium text-white whitespace-nowrap">
                             📊 {currentContext.symbol} · {currentContext.timeframe}
                         </div>
 
