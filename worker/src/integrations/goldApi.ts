@@ -128,3 +128,35 @@ function getMockGoldData(symbol: string, timeframe: Timeframe): PricePoint[] {
 
     return data;
 }
+
+
+export async function getGoldQuote(
+    symbol: string,
+    env: Env
+): Promise<{ price: number; change: number; changePercent: number }> {
+    // Always use mock data for consistency and reliability
+    return getMockGoldQuote(symbol);
+}
+
+function getMockGoldQuote(symbol: string): { price: number; change: number; changePercent: number } {
+    const basePrice = MOCK_PRICES[symbol] || 2050.00;
+
+    // Use seeded random for consistent daily change
+    const now = Date.now();
+    const timeBlock = Math.floor(now / (1000 * 60 * 60)); // Hourly consistency
+    const seed = generateSeed(symbol + 'quote', timeBlock);
+    const rng = seededRandom(seed);
+
+    // Return the EXACT base price so it matches the chart
+    const price = basePrice;
+
+    // Random change for display purposes
+    const change = (rng() * 15) * (rng() > 0.4 ? 1 : -1);
+    const changePercent = (change / basePrice) * 100;
+
+    return {
+        price: Number(price.toFixed(2)),
+        change: Number(change.toFixed(2)),
+        changePercent: Number(changePercent.toFixed(2)),
+    };
+}

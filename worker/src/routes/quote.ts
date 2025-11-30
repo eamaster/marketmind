@@ -1,5 +1,6 @@
 import type { Env } from '../core/types';
 import { getStockQuote } from '../integrations/finnhub';
+import { getGoldQuote } from '../integrations/goldApi';
 
 export async function handleQuoteRequest(
     request: Request,
@@ -23,7 +24,12 @@ export async function handleQuoteRequest(
     }
 
     try {
-        const data = await getStockQuote(symbol, env);
+        let data;
+        if (symbol === 'XAU' || symbol === 'XAG') {
+            data = await getGoldQuote(symbol, env);
+        } else {
+            data = await getStockQuote(symbol, env);
+        }
 
         return new Response(JSON.stringify(data), {
             headers: {
