@@ -1,4 +1,6 @@
 import type { Env, PricePoint, Timeframe } from '../core/types';
+import { MOCK_PRICES } from '../core/constants';
+import { seededRandom, generateSeed } from '../core/random';
 
 // Finnhub client for stock data
 // Docs: https://finnhub.io/docs/api
@@ -33,7 +35,7 @@ export async function getStockCandles(
         if (!response.ok) {
             const errorText = await response.text();
             console.error('[Finnhub] API error:', response.status, response.statusText, errorText);
-            throw new Error(`Finnhub API error: ${response.status} ${response.statusText}`);
+            throw new Error(`Finnhub API error: ${response.status} ${response.statusText} - Body: ${errorText}`);
         }
 
         const data = await response.json();
@@ -114,9 +116,6 @@ function normalizeStockData(apiData: any): PricePoint[] {
     return data;
 }
 
-import { MOCK_PRICES } from '../core/constants';
-import { seededRandom, generateSeed } from '../core/random';
-
 function getMockStockData(symbol: string, timeframe: Timeframe): PricePoint[] {
     console.log(`[Finnhub] Generating ${timeframe} mock data for ${symbol}`);
 
@@ -191,7 +190,8 @@ export async function getStockQuote(
         const response = await fetch(url.toString());
 
         if (!response.ok) {
-            throw new Error(`Finnhub API error: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`Finnhub API error: ${response.status} ${response.statusText} - Body: ${errorText}`);
         }
 
         const data = await response.json();
