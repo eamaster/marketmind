@@ -1,5 +1,6 @@
 import { useState, type ReactNode, cloneElement, isValidElement } from 'react';
 import { Navbar } from './Navbar';
+import { Footer } from './Footer';
 
 interface MainLayoutProps {
     children: ReactNode;
@@ -39,6 +40,7 @@ export function MainLayout({
                     aria-label="Asset dashboard"
                 >
                     {children}
+                    <Footer />
                 </main>
             </div>
 
