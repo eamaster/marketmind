@@ -46,7 +46,7 @@ export function AiChatPanel({
 
     return (
         <div
-            className="flex flex-col h-full bg-white dark:bg-slate-900/50"
+            className="flex flex-col h-full bg-white dark:bg-slate-900/50 rounded-2xl overflow-hidden"
             role="complementary"
             aria-label="AI Market Analyst chat"
         >
