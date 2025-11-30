@@ -31,8 +31,10 @@ export async function getStockCandles(
             try {
                 return await fetchCandles(symbol, '1M', apiKey);
             } catch (fallbackError) {
-                // If even fallback fails, throw the original error with debug info
-                throw enhanceError(error, apiKey);
+                // If even fallback fails (e.g. Key doesn't support Candles at all),
+                // return Mock Data so the app doesn't crash.
+                console.warn(`[Finnhub] Real data failed (403). Falling back to Mock Data.`);
+                return getMockStockData(symbol, timeframe);
             }
         }
 
