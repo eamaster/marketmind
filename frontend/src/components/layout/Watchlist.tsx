@@ -16,8 +16,10 @@ const WATCHLIST_ITEMS = [
     { symbol: 'BRK.B', name: 'Berkshire Hathaway' },
     { symbol: 'JPM', name: 'JPMorgan Chase' },
     { symbol: 'XOM', name: 'Exxon Mobil' },
-    { symbol: 'GLD', name: 'SPDR Gold Trust' },
-    { symbol: 'SLV', name: 'iShares Silver Trust' },
+    { symbol: 'XAU', name: 'Gold Spot (USD)' },
+    { symbol: 'XAG', name: 'Silver Spot (USD)' },
+    { symbol: 'GLD', name: 'SPDR Gold Trust (ETF)' },
+    { symbol: 'SLV', name: 'iShares Silver Trust (ETF)' },
 ];
 
 function WatchlistRow({ item, onClick }: { item: { symbol: string; name: string }; onClick?: () => void }) {
