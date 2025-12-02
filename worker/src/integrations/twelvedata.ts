@@ -2,8 +2,49 @@ import type { Env, PricePoint, Timeframe } from '../core/types';
 import { MOCK_PRICES } from '../core/constants';
 import { seededRandom, generateSeed } from '../core/random';
 
-// Twelve Data client for stock data
+// Twelve Data client for stock data with comprehensive caching
 // Docs: https://twelvedata.com/docs
+
+// ============================================================================
+// CACHE SYSTEM - Store recent real API data to avoid showing old mock data
+// ============================================================================
+
+interface CachedData<T> {
+    data: T;
+    timestamp: number;
+}
+
+// In-memory cache with 1-hour TTL
+const cache = new Map<string, CachedData<any>>();
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
+
+/**
+ * Get cached data if available and not expired
+ */
+function getCachedData<T>(key: string): T | null {
+    const cached = cache.get(key);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+        const ageSeconds = Math.round((Date.now() - cached.timestamp) / 1000);
+        console.log(`[Cache] Hit for ${key} (${ageSeconds}s old)`);
+        return cached.data;
+    }
+    return null;
+}
+
+/**
+ * Store data in cache
+ */
+function setCachedData<T>(key: string, data: T): void {
+    cache.set(key, {
+        data,
+        timestamp: Date.now()
+    });
+    console.log(`[Cache] Stored ${key}`);
+}
+
+// ============================================================================
+// STOCK CANDLES API
+// ============================================================================
 
 export async function getStockCandles(
     symbol: string,
@@ -17,22 +58,34 @@ export async function getStockCandles(
         return getMockStockData(symbol, timeframe);
     }
 
+    const cacheKey = `candles_${symbol}_${timeframe}`;
+
     try {
-        // First attempt: Try the requested timeframe
-        return await fetchCandles(symbol, timeframe, apiKey);
+        // Attempt to fetch from API
+        const data = await fetchCandles(symbol, timeframe, apiKey);
+
+        // Cache successful response
+        setCachedData(cacheKey, data);
+
+        return data;
     } catch (error) {
-        // Check if it's a rate limit error (429) or other API error
+        // Check if it's a rate limit error
         const errorMessage = error instanceof Error ? error.message : '';
+
         if (errorMessage.includes('429')) {
-            console.warn(`[Twelve Data] Rate limit exceeded. Falling back to mock data.`);
-            return getMockStockData(symbol, timeframe);
-        } else if (errorMessage.includes('error')) {
-            console.warn(`[Twelve Data] API error. Falling back to mock data.`);
-            return getMockStockData(symbol, timeframe);
+            console.warn(`[Twelve Data] Rate limit exceeded for ${symbol}/${timeframe}`);
+
+            // Try to return cached data first
+            const cachedData = getCachedData<PricePoint[]>(cacheKey);
+            if (cachedData) {
+                console.log(`[Twelve Data] Returning cached candles instead of mock data`);
+                return cachedData;
+            }
         }
 
-        // For other errors, throw with debug info
-        throw enhanceError(error, apiKey);
+        // No cache available or other error, fall back to mock
+        console.warn(`[Twelve Data] No cache available, using mock data for ${symbol}/${timeframe}`);
+        return getMockStockData(symbol, timeframe);
     }
 }
 
@@ -61,9 +114,7 @@ async function fetchCandles(symbol: string, timeframe: Timeframe, apiKey: string
     if (!response.ok) {
         const errorText = await response.text();
 
-        // Implement exponential backoff for rate limit errors
         if (response.status === 429) {
-            console.warn('[Twelve Data] Rate limit exceeded (429). Implement retry with exponential backoff.');
             throw new Error(`Twelve Data API rate limit: 429 - ${errorText}`);
         }
 
@@ -72,7 +123,6 @@ async function fetchCandles(symbol: string, timeframe: Timeframe, apiKey: string
 
     const data = await response.json() as any;
 
-    // Check for error status in response body
     if (data.status === 'error') {
         throw new Error(`Twelve Data API error: ${data.message || 'Unknown error'}`);
     }
@@ -80,32 +130,24 @@ async function fetchCandles(symbol: string, timeframe: Timeframe, apiKey: string
     return normalizeStockData(data);
 }
 
-function enhanceError(error: any, apiKey: string): Error {
-    const keyDebug = apiKey
-        ? `(Key configured: Yes, Length: ${apiKey.length}, Prefix: ${apiKey.substring(0, 4)}...)`
-        : '(Key configured: No)';
-
-    return new Error(`Twelve Data API Error: ${error instanceof Error ? error.message : 'Unknown'} ${keyDebug}`);
-}
-
 function getTimeframeParams(timeframe: Timeframe): { interval: string; outputsize: number } {
     switch (timeframe) {
         case '1D':
             return {
-                interval: '1min', // 1-minute intervals
-                outputsize: 390,   // Full trading day (6.5 hours * 60 minutes)
+                interval: '1min',
+                outputsize: 390,
             };
         case '1W':
             return {
-                interval: '1h',    // 1-hour intervals
-                outputsize: 168,   // 7 days * 24 hours
+                interval: '1h',
+                outputsize: 168,
             };
         case '1M':
             return {
-                interval: '1day',  // Daily intervals
-                outputsize: 30,    // 30 days
+                interval: '1day',
+                outputsize: 30,
             };
-        default: // Fallback to daily
+        default:
             return {
                 interval: '1day',
                 outputsize: 30,
@@ -114,7 +156,6 @@ function getTimeframeParams(timeframe: Timeframe): { interval: string; outputsiz
 }
 
 function normalizeStockData(apiData: any): PricePoint[] {
-    // Twelve Data returns: { meta: {...}, values: [{datetime, open, high, low, close, volume}], status: "ok" }
     if (apiData.status !== 'ok') {
         console.warn('[Twelve Data] API response status not OK:', apiData.status);
         return [];
@@ -128,8 +169,6 @@ function normalizeStockData(apiData: any): PricePoint[] {
     const data: PricePoint[] = [];
 
     for (const point of apiData.values) {
-        // CRITICAL: Twelve Data returns strings, convert to numbers with parseFloat
-        // Handle null/undefined gracefully with fallback to 0
         data.push({
             timestamp: point.datetime ? new Date(point.datetime).toISOString() : new Date().toISOString(),
             open: point.open ? parseFloat(point.open) : 0,
@@ -140,9 +179,12 @@ function normalizeStockData(apiData: any): PricePoint[] {
         });
     }
 
-    // Twelve Data returns newest first, reverse to get chronological order
     return data.reverse();
 }
+
+// ============================================================================
+// STOCK QUOTE API  
+// ============================================================================
 
 export async function getStockQuote(
     symbol: string,
@@ -151,8 +193,11 @@ export async function getStockQuote(
     const apiKey = env.TWELVEDATA_API_KEY;
 
     if (!apiKey) {
+        console.warn('[Twelve Data] No API key configured, using mock data');
         return getMockQuote(symbol);
     }
+
+    const cacheKey = `quote_${symbol}`;
 
     try {
         const url = new URL('https://api.twelvedata.com/quote');
@@ -174,7 +219,17 @@ export async function getStockQuote(
             const errorText = await response.text();
 
             if (response.status === 429) {
-                console.warn('[Twelve Data] Rate limit exceeded. Falling back to mock data.');
+                console.warn(`[Twelve Data] Rate limit exceeded for ${symbol} quote`);
+
+                // Try to return cached data first
+                const cachedData = getCachedData<{ price: number; change: number; changePercent: number }>(cacheKey);
+                if (cachedData) {
+                    console.log(`[Twelve Data] Returning cached quote instead of mock data`);
+                    return cachedData;
+                }
+
+                // No cache, use mock
+                console.warn(`[Twelve Data] No cache available, using mock data`);
                 return getMockQuote(symbol);
             }
 
@@ -183,25 +238,47 @@ export async function getStockQuote(
 
         const data = await response.json() as any;
 
-        // Check for error status in response body
         if (data.status === 'error') {
-            console.warn('[Twelve Data] API error, falling back to mock data:', data.message);
+            console.warn('[Twelve Data] API error:', data.message);
+
+            // Try cache on error
+            const cachedData = getCachedData<{ price: number; change: number; changePercent: number }>(cacheKey);
+            if (cachedData) {
+                console.log(`[Twelve Data] Returning cached quote on error`);
+                return cachedData;
+            }
+
             return getMockQuote(symbol);
         }
 
-        // Twelve Data quote response: { symbol, name, close, change, percent_change, ... }
-        // CRITICAL: Apply parseFloat() to all numeric fields
-        return {
+        // Parse and cache successful response
+        const result = {
             price: data.close ? parseFloat(data.close) : 0,
             change: data.change ? parseFloat(data.change) : 0,
             changePercent: data.percent_change ? parseFloat(data.percent_change) : 0,
         };
+
+        setCachedData(cacheKey, result);
+
+        return result;
     } catch (error) {
         console.error('[Twelve Data] Error fetching quote:', error);
-        // Gracefully fall back to mock data instead of throwing
+
+        // Try to return cached data on any error
+        const cachedData = getCachedData<{ price: number; change: number; changePercent: number }>(cacheKey);
+        if (cachedData) {
+            console.log(`[Twelve Data] Returning cached quote on exception`);
+            return cachedData;
+        }
+
+        // Last resort: mock data
         return getMockQuote(symbol);
     }
 }
+
+// ============================================================================
+// MOCK DATA GENERATORS (Fallback only - cache is preferred)
+// ============================================================================
 
 function getMockStockData(symbol: string, timeframe: Timeframe): PricePoint[] {
     console.log(`[Twelve Data] Generating ${timeframe} mock data for ${symbol}`);
