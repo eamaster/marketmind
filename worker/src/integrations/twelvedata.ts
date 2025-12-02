@@ -21,13 +21,24 @@ const CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
 /**
  * Get cached data if available and not expired
  */
-function getCachedData<T>(key: string): T | null {
+function getCachedData<T>(key: string, ignoreExpiry: boolean = false): T | null {
     const cached = cache.get(key);
-    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-        const ageSeconds = Math.round((Date.now() - cached.timestamp) / 1000);
+    if (!cached) return null;
+    
+    const ageSeconds = Math.round((Date.now() - cached.timestamp) / 1000);
+    
+    // When rate limited, return cache regardless of age
+    if (ignoreExpiry) {
+        console.log(`[Cache] Hit for ${key} (${ageSeconds}s old) - ignoring expiry`);
+        return cached.data;
+    }
+    
+    // Normal: check TTL
+    if ((Date.now() - cached.timestamp) < CACHE_TTL) {
         console.log(`[Cache] Hit for ${key} (${ageSeconds}s old)`);
         return cached.data;
     }
+    
     return null;
 }
 
@@ -76,7 +87,7 @@ export async function getStockCandles(
             console.warn(`[Twelve Data] Rate limit exceeded for ${symbol}/${timeframe}`);
 
             // Try to return cached data first
-            const cachedData = getCachedData<PricePoint[]>(cacheKey);
+            const cachedData = getCachedData<PricePoint[]>(cacheKey, true);
             if (cachedData) {
                 console.log(`[Twelve Data] Returning cached candles instead of mock data`);
                 return cachedData;
@@ -222,7 +233,7 @@ export async function getStockQuote(
                 console.warn(`[Twelve Data] Rate limit exceeded for ${symbol} quote`);
 
                 // Try to return cached data first
-                const cachedData = getCachedData<{ price: number; change: number; changePercent: number }>(cacheKey);
+                const cachedData = getCachedData<{ price: number; change: number; changePercent: number }>(cacheKey, true);
                 if (cachedData) {
                     console.log(`[Twelve Data] Returning cached quote instead of mock data`);
                     return cachedData;
@@ -242,7 +253,7 @@ export async function getStockQuote(
             console.warn('[Twelve Data] API error:', data.message);
 
             // Try cache on error
-            const cachedData = getCachedData<{ price: number; change: number; changePercent: number }>(cacheKey);
+            const cachedData = getCachedData<{ price: number; change: number; changePercent: number }>(cacheKey, true);
             if (cachedData) {
                 console.log(`[Twelve Data] Returning cached quote on error`);
                 return cachedData;
@@ -265,7 +276,7 @@ export async function getStockQuote(
         console.error('[Twelve Data] Error fetching quote:', error);
 
         // Try to return cached data on any error
-        const cachedData = getCachedData<{ price: number; change: number; changePercent: number }>(cacheKey);
+        const cachedData = getCachedData<{ price: number; change: number; changePercent: number }>(cacheKey, true);
         if (cachedData) {
             console.log(`[Twelve Data] Returning cached quote on exception`);
             return cachedData;
