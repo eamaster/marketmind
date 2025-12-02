@@ -40,7 +40,7 @@ Frontend (React + Vite + TailwindCSS)
 Cloudflare Worker (BFF Layer)
           ↓
     External APIs
-    ├── Finnhub (Stocks)
+    ├── Twelve Data (Stocks)
     ├── Marketaux (News)
     ├── OilPriceAPI (Energy)
     ├── Gold API (Metals)
@@ -74,7 +74,7 @@ marketmind/
 │   │   │   ├── quote.ts
 │   │   │   └── aiAnalyze.ts
 │   │   ├── integrations/ # External API clients
-│   │   │   ├── finnhub.ts
+│   │   │   ├── twelvedata.ts
 │   │   │   ├── oilprice.ts
 │   │   │   ├── goldApi.ts
 │   │   │   ├── marketaux.ts
@@ -94,7 +94,7 @@ marketmind/
 - **Node.js** 18+ and npm
 - **Cloudflare account** (for Worker deployment)
 - **API Keys** (optional for development, required for production):
-  - [Finnhub](https://finnhub.io/) - Stock market data
+  - [Twelve Data](https://twelvedata.com/) - Stock market data
   - [Marketaux](https://www.marketaux.com/) - Financial news
   - [OilPriceAPI](https://www.oilpriceapi.com/) - Energy commodities
   - [Gold API](https://www.goldapi.io/) - Precious metals
@@ -131,7 +131,7 @@ Create `worker/.dev.vars` file for local development:
 
 ```env
 # Optional - app will use mock data if not provided
-FINNHUB_API_KEY=your_finnhub_api_key
+TWELVEDATA_API_KEY=your_twelvedata_api_key
 MARKETAUX_API_TOKEN=your_marketaux_token
 OILPRICE_API_KEY=your_oilprice_api_key
 GOLD_API_KEY=your_gold_api_key
@@ -193,7 +193,7 @@ npm run deploy
 cd worker
 
 # Set production API keys as Cloudflare secrets
-wrangler secret put FINNHUB_API_KEY
+wrangler secret put TWELVEDATA_API_KEY
 wrangler secret put MARKETAUX_API_TOKEN
 wrangler secret put OILPRICE_API_KEY
 wrangler secret put GOLD_API_KEY
@@ -240,11 +240,11 @@ cd frontend && npm run lint
 
 ## 🔑 API Integration Details
 
-### Finnhub (Stock Data)
-- **Endpoint:** Stock candles and quotes
-- **Free Tier:** Limited to daily resolution
+### Twelve Data (Stock Data)
+- **Endpoint:** Time series and quote endpoints
+- **Free Tier:** 800 requests/day, 1-minute intervals supported
 - **Fallback:** Mock data with realistic price generation
-- **Rate Limit:** 60 calls/minute (free tier)
+- **Rate Limit:** 8 requests/minute (free tier)
 
 ### Marketaux (Financial News)
 - **Endpoint:** News articles with sentiment scores
@@ -335,7 +335,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 🙏 Acknowledgments
 
-- Market data provided by Finnhub, Marketaux, OilPriceAPI, and Gold API
+- Market data provided by Twelve Data, Marketaux, OilPriceAPI, and Gold API
 - AI powered by Google Gemini
 - Charts by Recharts
 - Hosted on Cloudflare Workers and GitHub Pages

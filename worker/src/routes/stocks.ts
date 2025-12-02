@@ -1,5 +1,5 @@
 import type { Env, AssetDataResponse } from '../core/types';
-import { getStockCandles } from '../integrations/finnhub';
+import { getStockCandles } from '../integrations/twelvedata';
 
 export async function handleStocksRequest(
     request: Request,

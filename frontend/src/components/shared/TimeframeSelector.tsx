@@ -5,7 +5,7 @@ interface TimeframeSelectorProps {
     onChange: (timeframe: Timeframe) => void;
 }
 
-// Only 1D, 1W, 1M allowed - respects Finnhub 1-year historical data limit
+// Only 1D, 1W, 1M allowed - optimized for Twelve Data API
 const timeframes: Timeframe[] = ['1D', '1W', '1M'];
 
 export function TimeframeSelector({ value, onChange }: TimeframeSelectorProps) {

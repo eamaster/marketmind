@@ -18,7 +18,7 @@ export function Footer() {
                 {/* Data Sources Badge */}
                 <div className="bg-slate-100 dark:bg-slate-800/50 rounded-full px-4 py-1.5 border border-slate-200 dark:border-slate-700/50">
                     <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                        Powered by <span className="font-medium text-slate-700 dark:text-slate-300">Finnhub</span>,{' '}
+                        Powered by <span className="font-medium text-slate-700 dark:text-slate-300">Twelve Data</span>,{' '}
                         <span className="font-medium text-slate-700 dark:text-slate-300">OilPriceAPI</span>,{' '}
                         <span className="font-medium text-slate-700 dark:text-slate-300">GoldAPI</span> &{' '}
                         <span className="font-medium text-blue-600 dark:text-blue-400">Google Gemini</span>

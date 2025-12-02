@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AlertTriangle, Info } from 'lucide-react';
 
 interface ApiUsage {
-    finnhub: number;
+    twelvedata: number;
     marketaux: number;
     goldApi: number;
     lastReset: {
@@ -24,7 +24,7 @@ function getStoredUsage(): ApiUsage {
         return JSON.parse(stored);
     }
     return {
-        finnhub: 0,
+        twelvedata: 0,
         marketaux: 0,
         goldApi: 0,
         lastReset: {
@@ -176,7 +176,7 @@ export function ApiStatusIndicator() {
 
 // Export hook for tracking API calls
 export function useApiTracking() {
-    const trackApiCall = (service: 'finnhub' | 'marketaux' | 'goldApi') => {
+    const trackApiCall = (service: 'twelvedata' | 'marketaux' | 'goldApi') => {
         const usage = getStoredUsage();
         usage[service]++;
         saveUsage(usage);

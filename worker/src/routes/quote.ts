@@ -1,5 +1,5 @@
 import type { Env } from '../core/types';
-import { getStockQuote } from '../integrations/finnhub';
+import { getStockQuote } from '../integrations/twelvedata';
 import { getGoldQuote } from '../integrations/goldApi';
 
 export async function handleQuoteRequest(

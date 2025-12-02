@@ -31,7 +31,7 @@ export type Timeframe = '1D' | '1W' | '1M';
 export interface Env {
     OILPRICE_API_KEY?: string;
     GOLD_API_KEY?: string;
-    FINNHUB_API_KEY?: string;
+    TWELVEDATA_API_KEY?: string;
     MARKETAUX_API_TOKEN?: string;
     GEMINI_API_KEY?: string;
     WORKER_ENV?: string;
