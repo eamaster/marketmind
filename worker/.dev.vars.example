@@ -1,0 +1,23 @@
+# Example environment variables for local development
+# Copy this file to .dev.vars and fill in your actual API keys
+# Never commit .dev.vars to git!
+
+# Finnhub Stock API (Free tier: 60 calls/minute)
+# Get your key at: https://finnhub.io/register
+FINNHUB_API_KEY=your_finnhub_api_key_here
+
+# Marketaux News API
+# Get your key at: https://www.marketaux.com/
+MARKETAUX_API_TOKEN=your_marketaux_token_here
+
+# OilPrice API  
+# Get your key at: https://www.oilpriceapi.com/
+OILPRICE_API_KEY=your_oilprice_api_key_here
+
+# Gold API
+# Get your key at: https://www.goldapi.io/
+GOLD_API_KEY=your_gold_api_key_here
+
+# Google Gemini API (for AI analysis)
+# Get your key at: https://makersuite.google.com/app/apikey
+GEMINI_API_KEY=your_gemini_api_key_here

@@ -30,7 +30,7 @@ export async function getNews(
             throw new Error(`Marketaux API error: ${response.status} ${response.statusText}`);
         }
 
-        const data = await response.json();
+        const data = await response.json() as { data?: any[] };
         console.log(`[Marketaux] Received ${data?.data?.length || 0} articles`);
         const normalized = normalizeNewsData(data);
         console.log(`[Marketaux] Normalized ${normalized.articles.length} articles, sentiment: ${normalized.sentiment.label}`);

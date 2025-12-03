@@ -1,9 +1,12 @@
 import type { Env, PricePoint, Timeframe } from '../core/types';
-import { MOCK_PRICES } from '../core/constants';
-import { seededRandom, generateSeed } from '../core/random';
+import { KVCache } from '../core/cache';
 
-// Finnhub client for stock data
+// Finnhub client for stock data with KV caching + stale fallback
 // Docs: https://finnhub.io/docs/api
+// Strategy: Fresh cache (10s) -> API call -> Stale cache -> Error (NO MOCK DATA)
+
+const QUOTE_TTL = 10; // 10 seconds for real-time quotes
+const CANDLES_TTL = 60; // 60 seconds for historical candles
 
 export async function getStockCandles(
     symbol: string,
@@ -13,32 +16,44 @@ export async function getStockCandles(
     const apiKey = env.FINNHUB_API_KEY;
 
     if (!apiKey) {
-        console.warn('[Finnhub] No API key configured, using mock data');
-        return getMockStockData(symbol, timeframe);
+        throw new Error('FINNHUB_API_KEY not configured');
     }
 
-    try {
-        // First attempt: Try the requested timeframe
-        return await fetchCandles(symbol, timeframe, apiKey);
-    } catch (error) {
-        // Check if it's a 403 Forbidden error (Plan Limit)
-        const errorMessage = error instanceof Error ? error.message : '';
-        if (errorMessage.includes('403')) {
-            console.warn(`[Finnhub] 403 Forbidden for ${timeframe}. Falling back to Daily resolution (Free Tier compatible).`);
+    // Initialize KV cache if available
+    const cache = env.MARKETMIND_CACHE ? new KVCache(env.MARKETMIND_CACHE) : null;
+    const cacheKey = `candles:${symbol}:${timeframe}`;
 
-            // Fallback: Fetch Daily data for the last month
-            // This ensures Free Tier users still see REAL data instead of an error
-            try {
-                return await fetchCandles(symbol, '1M', apiKey);
-            } catch (fallbackError) {
-                // If even fallback fails (e.g. Key doesn't support Candles at all),
-                // return Mock Data so the app doesn't crash.
-                console.warn(`[Finnhub] Real data failed (403). Falling back to Mock Data.`);
-                return getMockStockData(symbol, timeframe);
+    // 1. Check KV cache first (fresh data)
+    if (cache) {
+        const cached = await cache.get<PricePoint[]>(cacheKey);
+        if (cached && !cached.isStale) {
+            console.log(`[Finnhub] Cache hit (fresh) for ${symbol} ${timeframe}`);
+            return cached.data;
+        }
+    }
+
+    // 2. Call Finnhub API
+    try {
+        const data = await fetchCandles(symbol, timeframe, apiKey);
+
+        // Store in cache for future requests
+        if (cache) {
+            await cache.set(cacheKey, data, CANDLES_TTL);
+        }
+
+        console.log(`[Finnhub] API success for ${symbol} ${timeframe}`);
+        return data;
+    } catch (error) {
+        // 3. If API fails, try stale cache
+        if (cache) {
+            const staleData = await cache.getStale<PricePoint[]>(cacheKey);
+            if (staleData) {
+                console.warn(`[Finnhub] API failed, returning stale cache for ${symbol} ${timeframe}`);
+                return staleData;
             }
         }
 
-        // For other errors, throw with debug info
+        // 4. No cache available, throw error (no mock data!)
         throw enhanceError(error, apiKey);
     }
 }
@@ -59,7 +74,7 @@ async function fetchCandles(symbol: string, timeframe: Timeframe, apiKey: string
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Finnhub API error: ${response.status} ${response.statusText} - Body: ${errorText}`);
+        throw new Error(`Finnhub API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
@@ -80,23 +95,23 @@ function getTimeframeParams(timeframe: Timeframe): { resolution: string; from: n
     switch (timeframe) {
         case '1D':
             return {
-                resolution: '5', // 5-minute intervals (Paid)
+                resolution: '5', // 5-minute intervals
                 from: now - 24 * 60 * 60,
                 to: now,
             };
         case '1W':
             return {
-                resolution: '60', // 1-hour intervals (Paid)
+                resolution: '60', // 1-hour intervals
                 from: now - 7 * 24 * 60 * 60,
                 to: now,
             };
         case '1M':
             return {
-                resolution: 'D', // Daily intervals (Free)
+                resolution: 'D', // Daily intervals (Free tier compatible)
                 from: now - 30 * 24 * 60 * 60,
                 to: now,
             };
-        default: // Fallback to daily
+        default:
             return {
                 resolution: 'D',
                 from: now - 30 * 24 * 60 * 60,
@@ -109,12 +124,12 @@ function normalizeStockData(apiData: any): PricePoint[] {
     // Finnhub returns: { c: [close], h: [high], l: [low], o: [open], t: [timestamp], v: [volume], s: status }
     if (apiData.s !== 'ok') {
         console.warn('[Finnhub] API response status not OK:', apiData.s);
-        return [];
+        throw new Error(`Finnhub API returned status: ${apiData.s}`);
     }
 
     if (!apiData.t || apiData.t.length === 0) {
         console.warn('[Finnhub] No timestamp data in response');
-        return [];
+        throw new Error('No data available from Finnhub');
     }
 
     const data: PricePoint[] = [];
@@ -140,9 +155,23 @@ export async function getStockQuote(
     const apiKey = env.FINNHUB_API_KEY;
 
     if (!apiKey) {
-        return getMockQuote(symbol);
+        throw new Error('FINNHUB_API_KEY not configured');
     }
 
+    // Initialize KV cache if available
+    const cache = env.MARKETMIND_CACHE ? new KVCache(env.MARKETMIND_CACHE) : null;
+    const cacheKey = `quote:${symbol}`;
+
+    // 1. Check KV cache first (fresh data)
+    if (cache) {
+        const cached = await cache.get<{ price: number; change: number; changePercent: number }>(cacheKey);
+        if (cached && !cached.isStale) {
+            console.log(`[Finnhub] Cache hit (fresh) for quote ${symbol}`);
+            return cached.data;
+        }
+    }
+
+    // 2. Call Finnhub API
     try {
         const url = new URL('https://finnhub.io/api/v1/quote');
         url.searchParams.set('symbol', symbol);
@@ -152,84 +181,36 @@ export async function getStockQuote(
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Finnhub API error: ${response.status} ${response.statusText} - Body: ${errorText}`);
+            throw new Error(`Finnhub API error: ${response.status} ${response.statusText} - ${errorText}`);
         }
 
-        const data = await response.json();
+        const data = await response.json() as { c: number; d: number; dp: number };
 
         // Finnhub quote response: { c: current, d: change, dp: percent change, ... }
-        return {
+        const quote = {
             price: data.c || 0,
             change: data.d || 0,
             changePercent: data.dp || 0,
         };
+
+        // Store in cache
+        if (cache) {
+            await cache.set(cacheKey, quote, QUOTE_TTL);
+        }
+
+        console.log(`[Finnhub] API success for quote ${symbol}`);
+        return quote;
     } catch (error) {
-        console.error('[Finnhub] Error fetching quote:', error);
+        // 3. If API fails, try stale cache
+        if (cache) {
+            const staleData = await cache.getStale<{ price: number; change: number; changePercent: number }>(cacheKey);
+            if (staleData) {
+                console.warn(`[Finnhub] API failed, returning stale cache for quote ${symbol}`);
+                return staleData;
+            }
+        }
+
+        // 4. No cache available, throw error
         throw enhanceError(error, apiKey);
     }
-}
-
-function getMockStockData(symbol: string, timeframe: Timeframe): PricePoint[] {
-    console.log(`[Finnhub] Generating ${timeframe} mock data for ${symbol}`);
-
-    const targetPrice = MOCK_PRICES[symbol] || 150.00;
-    const points = timeframe === '1D' ? 78 : timeframe === '1W' ? 168 : 30;
-    const interval = timeframe === '1D' ? 5 * 60 * 1000 : timeframe === '1W' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-
-    const now = Date.now();
-    const timeBlock = Math.floor(now / (1000 * 60 * 60));
-    const seed = generateSeed(symbol + timeframe, timeBlock);
-    const rng = seededRandom(seed);
-
-    const data: PricePoint[] = [];
-    let currentPrice = targetPrice;
-    const tempPoints: { close: number; open: number; high: number; low: number; volume: number }[] = [];
-
-    for (let i = 0; i < points; i++) {
-        const volatility = (rng() - 0.5) * (targetPrice * 0.01);
-        const trend = (targetPrice * 0.0005);
-        const prevPrice = currentPrice - volatility - trend;
-
-        tempPoints.unshift({
-            close: currentPrice,
-            open: prevPrice,
-            high: Math.max(prevPrice, currentPrice) + rng() * (targetPrice * 0.005),
-            low: Math.min(prevPrice, currentPrice) - rng() * (targetPrice * 0.005),
-            volume: Math.floor(rng() * 1000000) + 500000,
-        });
-
-        currentPrice = prevPrice;
-    }
-
-    for (let i = 0; i < points; i++) {
-        const timestamp = new Date(now - (points - i - 1) * interval).toISOString();
-        const p = tempPoints[i];
-        data.push({
-            timestamp,
-            open: Number(p.open.toFixed(2)),
-            high: Number(p.high.toFixed(2)),
-            low: Number(p.low.toFixed(2)),
-            close: Number(p.close.toFixed(2)),
-            volume: p.volume,
-        });
-    }
-
-    return data;
-}
-
-function getMockQuote(symbol: string): { price: number; change: number; changePercent: number } {
-    const basePrice = MOCK_PRICES[symbol] || 150.00;
-    const now = Date.now();
-    const timeBlock = Math.floor(now / (1000 * 60 * 60));
-    const seed = generateSeed(symbol + 'quote', timeBlock);
-    const rng = seededRandom(seed);
-    const price = basePrice;
-    const change = (rng() * 5) * (rng() > 0.5 ? 1 : -1);
-    const changePercent = (change / basePrice) * 100;
-
-    return {
-        price: Number(price.toFixed(2)),
-        change: Number(change.toFixed(2)),
-        changePercent: Number(changePercent.toFixed(2)),
-    };
 }

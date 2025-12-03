@@ -35,6 +35,7 @@ export interface Env {
     MARKETAUX_API_TOKEN?: string;
     GEMINI_API_KEY?: string;
     WORKER_ENV?: string;
+    MARKETMIND_CACHE?: KVNamespace;
 }
 
 // API Request/Response types
