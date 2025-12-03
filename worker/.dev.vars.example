@@ -6,9 +6,9 @@
 # Get your free API key at: https://finnhub.io/register
 FINNHUB_API_KEY=your_finnhub_api_key_here
 
-# Alpha Vantage API (Historical candles for charts)
-# Get your free API key at: https://www.alphavantage.co/support/#api-key
-ALPHAVANTAGE_API_KEY=your_alphavantage_api_key_here
+# Massive.com API (Historical candles for charts)
+# Get your free API key at: https://massive.com/register
+MASSIVE_API_KEY=GxDxMBKnAkJp46JRsoATwHQQBYrqXl6S
 
 # Marketaux API (Financial news)
 # Get your key at: https://www.marketaux.com/

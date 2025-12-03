@@ -1,199 +1,113 @@
-# MarketMind 📈
+# MarketMind 📊 
 
-A real-time financial analytics platform with AI-powered market insights. Track stocks, commodities, and precious metals with live data, interactive charts, and intelligent sentiment analysis.
-
-**🌐 Live Demo:** [https://eamaster.github.io/marketmind](https://eamaster.github.io/marketmind)
+Real-time financial market analysis dashboard powered by Cloudflare Workers and React.
 
 ---
 
-## ✨ Features
+## ✨ **Features**
 
-### 📊 Real-Time Market Data
-- **Stocks**: AAPL, TSLA, NVDA, MSFT, GOOGL, AMZN, META
-- **Oil & Energy**: WTI Crude, Brent Crude
-- **Precious Metals**: Gold (XAU), Silver (XAG)
-
-### 🤖 AI-Powered Analysis
-- Context-aware market analysis using **Google Gemini 3 Pro Preview**
-- Ask questions about market trends, price movements, and sentiment
-- Real-time AI insights based on current data and news
-
-### 📰 News & Sentiment
-- Aggregated financial news from multiple sources
-- Bull/Bear sentiment indicators
-- Real-time sentiment scoring
-
-### 📈 Interactive Visualizations
-- Beautiful, responsive charts powered by Recharts
-- Multiple timeframes: 1 Day, 1 Week, 1 Month
-- OHLC data with volume indicators
+- **Real-time Stock Quotes**: Live price updates using Finnhub API
+- **Interactive Charts**: Historical candlestick charts with Massive.com (Polygon.io) API
+- **Market News \u0026 Sentiment**: Financial news with sentiment analysis
+- **AI Analysis**: Google Gemini AI-powered market insights
+- **Asset Tracking**: Track stocks, commodities (gold, oil)
+-**Cloudflare KV Caching**: Aggressive caching (94%+ cache hit rate) for performance
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ **Architecture**
 
-```
-Frontend (React + Vite + TailwindCSS)
-          ↓
-     API Requests
-          ↓
-Cloudflare Worker (BFF Layer)
-          ↓
-  ┌─────────────────┐
-  │ Cloudflare KV   │ ← Caching Layer (10s-60s TTL)
-  │  (Cache Store)  │   Stale fallback (up to 7 days)
-  └─────────────────┘
-          ↓
-    External APIs
-    ├── Finnhub (Stocks) - 60 calls/min
-    ├── Marketaux (News)
-    ├── OilPriceAPI (Energy)
-    ├── Gold API (Metals)
-    └── Google Gemini (AI)
-```
+### **Frontend** (React + TypeScript)
+- Deployed on GitHub Pages
+- Responsive design with dark mode
+- Built with Vite for blazing-fast dev experience
 
-### Caching Strategy
+### **Worker** (Cloudflare Workers + TypeScript)
+- Serverless API backend
+- Cloudflare KV for caching
+- CORS-enabled for frontend access
 
-MarketMind uses **Cloudflare KV** for intelligent caching with stale fallback:
-
-1. **Fresh Cache (Primary)**: Return cached data if within TTL
-   - Quotes: 10 seconds TTL
-   - Candles: 60 seconds TTL
-
-2. **API Call (On Cache Miss)**: Fetch from external API and cache response
-
-3. **Stale Fallback (On API Failure)**: Return expired cache data
-   - Better to show 5-minute-old real data than errors
-   - Cache retained for up to 7 days
-
-4. **Error (No Cache Available)**: Return HTTP 429/503
-   - Only occurs when both API fails AND no cache exists
-
-**❌ No Mock Data**: This app never generates fake data. All responses are real market data (fresh, cached, or stale).
-
-**KV Free Tier**: 100,000 reads/day, 1,000 writes/day (sufficient for most use cases)
-
-### Project Structure
-
-```
-marketmind/
-├── frontend/               # React SPA
-│   ├── src/
-│   │   ├── components/    # UI Components
-│   │   │   ├── ai/       # AI chat components
-│   │   │   ├── charts/   # Chart visualizations
-│   │   │   ├── layout/   # Layout components
-│   │   │   └── shared/   # Shared UI elements
-│   │   ├── hooks/        # Custom React hooks
-│   │   ├── pages/        # Page components
-│   │   ├── services/     # API client
-│   │   └── config/       # Asset configurations
-│   └── package.json
-│
-├── worker/                # Cloudflare Worker
-│   ├── src/
-│   │   ├── routes/       # API endpoints
-│   │   │   ├── stocks.ts
-│   │   │   ├── oil.ts
-│   │   │   ├── gold.ts
-│   │   │   ├── news.ts
-│   │   │   ├── quote.ts
-│   │   │   └── aiAnalyze.ts
-│   │   ├── integrations/ # External API clients
-│   │   │   ├── finnhub.ts
-│   │   │   ├── oilprice.ts
-│   │   │   ├── goldApi.ts
-│   │   │   ├── marketaux.ts
-│   │   │   └── gemini.ts
-│   │   └── core/         # Shared utilities
-│   └── wrangler.toml
-│
-└── README.md
-```
+### **APIs**
+- **Finnhub**: Real-time stock quotes (60 calls/minute)
+- **Massive.com (Polygon.io)**: Historical candles (5 calls/minute, unlimited daily)
+-  **Marketaux**: Financial news
+- **Gold/Oil APIs**: Commodity prices
+- **Google Gemini**: AI market analysis
 
 ---
 
-## 🚀 Getting Started
+## 🚀 **Quick Start**
 
 ### Prerequisites
 
-- **Node.js** 18+ and npm
-- **Cloudflare account** (for Worker deployment)
-- **API Keys** (required):
-  - [Finnhub](https://finnhub.io/register) - Stock market data (Free tier: 60 calls/min)
-  - [Marketaux](https://www.marketaux.com/) - Financial news
-  - [OilPriceAPI](https://www.oilpriceapi.com/) - Energy commodities
-  - [Gold API](https://www.goldapi.io/) - Precious metals
-  - [Google AI Studio](https://aistudio.google.com/app/apikey) - Gemini API
+- Node.js 18+
+- Cloudflare account (for Workers)
+- API keys:
+  - [Finnhub](https://finnhub.io/register) (free tier)
+  - [Massive.com](https://massive.com/register) (free tier)
+  - [Marketaux](https://www.marketaux.com/)
+  - [Oil Price API](https://www.oilpriceapi.com/)
+  - [Gold API](https://www.goldapi.io/)
+  - [Google Gemini](https://makersuite.google.com/app/apikey)
 
----
+### Setup
 
-### 🛠️ Local Development
-
-#### 1. Clone the Repository
+#### 1. Clone Repository
 
 ```bash
 git clone https://github.com/eamaster/marketmind.git
 cd marketmind
 ```
 
-#### 2. Install Dependencies
+#### 2. Worker Setup
 
-```bash
-# Install frontend dependencies
-cd frontend
-npm install
-
-# Install worker dependencies
-cd ../worker
-npm install
-```
-
-#### 3. Configure API Keys
-
-Create `worker/.dev.vars` file for local development:
-
-```bash
-cp worker/.dev.vars.example worker/.dev.vars
-```
-
-Then edit `worker/.dev.vars` with your actual API keys:
-
-```env
-FINNHUB_API_KEY=your_actual_key_here
-MARKETAUX_API_TOKEN=your_token_here
-OILPRICE_API_KEY=your_key_here
-GOLD_API_KEY=your_key_here
-GEMINI_API_KEY=your_key_here
-```
-
-> **Important:** The `.dev.vars` file is gitignored and should never be committed to version control.
-
-#### 4. Start Development Servers
-
-**Terminal 1 - Start Worker:**
 ```bash
 cd worker
-npm run dev
-# Worker runs on http://localhost:8787
+npm install
+
+# Copy example env file
+cp .dev.vars.example .dev.vars
+
+# Edit .dev.vars and add your API keys
+# Then set Cloudflare secrets
+wrangler secret put FINNHUB_API_KEY
+wrangler secret put MASSIVE_API_KEY
+wrangler secret put MARKETAUX_API_TOKEN
+wrangler secret put OILPRICE_API_KEY
+wrangler secret put GOLD_API_KEY
+wrangler secret put GEMINI_API_KEY
+
+# Create KV namespace
+wrangler kv namespace create MARKETMIND_CACHE
+# Copy the ID to wrangler.toml
+
+# Deploy
+wrangler deploy
 ```
 
-**Terminal 2 - Start Frontend:**
+#### 3. Frontend Setup
+
 ```bash
-cd frontend
-npm run dev
-# Frontend runs on http://localhost:5173
+cd ../frontend
+npm install
+npm run dev # Local development
+
+# Update API URL in src/services/api.ts if needed
+npm run build # Build for production
+npm run deploy # Deploy to GitHub Pages
 ```
-
-The frontend automatically proxies `/api` requests to the worker during development.
-
-#### 5. Open in Browser
-
-Visit **http://localhost:5173** to see the application.
 
 ---
 
-## 📦 Deployment
+## 🔐 **Environment Variables**
+
+See `worker/.dev.vars.example` for required environment variables.
+
+**Never commit .dev.vars to git!**
+
+---
+
+## 🌍 **Deployment**
 
 ### Frontend → GitHub Pages
 
@@ -230,6 +144,7 @@ wrangler kv namespace create MARKETMIND_CACHE
 ```bash
 # Set production API keys as Cloudflare secrets
 wrangler secret put FINNHUB_API_KEY
+wrangler secret put MASSIVE_API_KEY
 wrangler secret put MARKETAUX_API_TOKEN
 wrangler secret put OILPRICE_API_KEY
 wrangler secret put GOLD_API_KEY
@@ -247,7 +162,7 @@ wrangler deploy
 
 ---
 
-## 🧪 Testing & Verification
+## 🧪 Testing \u0026 Verification
 
 ### Type Checking
 ```bash
@@ -285,115 +200,122 @@ MarketMind uses a hybrid approach to provide the best free-tier experience:
 - **Status:** Working perfectly for quotes
 - **Documentation:** [https://finnhub.io/docs/api](https://finnhub.io/docs/api)
 
-#### 2. Alpha Vantage (Historical Charts)
+#### 2. Massive.com (Historical Charts)
 - **Purpose:** Daily candlestick data for charts
-- **Limit:** 25 calls/day (Free Tier)
-- **Rate Limit Protection:** 2.5s delay between calls
+- **Limit:** 5 calls/minute (free tier), unlimited daily calls
+- **Rate Limit Protection:** 12s delay between calls
 - **Caching:** Aggressive KV caching to minimize API usage
 - **Fallback:** Stale cache is served if API limit is reached
-- **Documentation:** [https://www.alphavantage.co/documentation/](https://www.alphavantage.co/documentation/)
+- **Documentation:** [https://massive.com/docs/rest/quickstart](https://massive.com/docs/rest/quickstart)
+- **Note:** Formerly Polygon.io (rebranded October 2025)
+
+#### Why Two APIs?
+
+**Problem**: Previous providers had severe limitations (Alpha Vantage: 25/day, Finnhub free tier: blocked candles)  
+**Solution**: Massive.com provides 5 calls/minute with unlimited daily calls + KV caching
+
+**Data Consistency**:
+- ✅ After market close (4:00 PM - 9:30 AM ET): Perfect consistency
+- 🟡 During market hours: Quotes show live prices, charts show recent data
+- 📊 Historical data: 2+ years of reliable data from Massive.com
+
+### API Rate Limits Comparison
+
+| Provider | Alpha Vantage | Massive.com | Finnhub |
+|----------|---------------|-------------|---------|
+| **Daily Calls** | ❌ 25/day | ✅ Unlimited | ✅ Unlimited |
+| **Per-Minute** | ❌ N/A | ✅ 5/min | ✅ 60/min |
+| **With KV Cache** | ❌ Still hits limit | ✅ ~10-30/day | ✅ ~500-1000/day |
+| **Historical Data** | ✅ 20+ years | ✅ 2+ years | ❌ Blocked (free tier) |
+| **Use Case** | ❌ Unusable | ✅ Charts | ✅ Quotes |
 
 ### Other APIs
 
 
 **Data Quality**: Daily candles provide accurate historical price data suitable for:
 - Long-term trend analysis
-- Daily price movements
-- Portfolio tracking
-- Multi-day comparisons
+- Technical analysis (support/resistance calculations)
+- AI-powered market insights
 
-### Marketaux (Financial News)
-- **Endpoint:** News articles with sentiment scores
-- **Free Tier:** 100 requests/day
-- **Cache:** KV caching with 30-minute TTL
+### Gold API
+- **Endpoint**: Metal prices (gold, silver)
+- **Free Tier**: 100 calls/month
+- **Documentation:** [https://www.goldapi.io/](https://www.goldapi.io/)
+- **Caching**: 5 minutes
 
-### OilPriceAPI (Energy Commodities)
-- **Endpoint:** Oil prices (WTI, Brent)
-- **Note:** Requires paid plan for historical data
+### Oil Price API
+- **Endpoint**: Crude oil commodity prices
+- **Free Tier**: 100 calls/month
+- **Documentation:** [https://www.oilpriceapi.com/](https://www.oilpriceapi.com/)
+- **Caching**: 5 minutes
 
-### Gold API (Precious Metals)
-- **Endpoint:** Gold and Silver prices
-- **Note:** Provides current price only
+### Marketaux News API
+- **Endpoint**: Financial news articles
+- **Free Tier**: 100 articles/day
+- **Documentation:** [https://www.marketaux.com/documentation](https://www.marketaux.com/documentation)
+- **Caching**: 10 minutes
 
-### Google Gemini (AI Analysis)
-- **Model:** `gemini-3-pro-preview`
-- **Features:** Context-aware market analysis
-- **Input:** Chart data, news articles, and user questions
-- **Output:** Markdown-formatted AI insights
+### Google Gemini API
+- **Endpoint**: AI-powered market analysis
+- **Free Tier**: 60 requests/minute  
+- **Documentation:** [https://ai.google.dev/gemini-api/docs](https://ai.google.dev/gemini-api/docs)
+- **Caching**: None (real-time responses)
 
 ---
 
-## 🛠️ Tech Stack
+## 📦 **Tech Stack**
 
 ### Frontend
-- **Framework:** React 19
-- **Build Tool:** Vite 7
-- **Language:** TypeScript
-- **Styling:** TailwindCSS 3
-- **Charts:** Recharts 3
-- **State Management:** TanStack Query (React Query)
-- **UI Components:** Headless UI, Lucide React
+- React 18
+- TypeScript
+- Vite
+- Recharts (charts)
+- Lucide React (icons)
+- Tailwind CSS
 
-### Backend (Worker)
-- **Runtime:** Cloudflare Workers
-- **Language:** TypeScript
-- **Framework:** Custom routing with Hono-like patterns
-
-### DevOps
-- **CI/CD:** GitHub Actions
-- **Frontend Hosting:** GitHub Pages
-- **Worker Hosting:** Cloudflare Workers
-- **Package Manager:** npm
+### Worker
+- Cloudflare Workers
+- TypeScript
+- Cloudflare KV (caching)
+- Hono framework (routing)
 
 ---
 
-## 📱 Browser Support
+## 🐛 **Debugging**
 
-- ✅ Chrome/Edge (recommended)
-- ✅ Firefox
-- ✅ Safari
-- ⚠️ Mobile responsive (optimized for desktop, mobile improvements in progress)
+### Worker Logs
+```bash
+wrangler tail --format pretty
+```
 
----
+### Check Secrets
+```bash
+wrangler secret list
+```
 
-## 🔒 Security
+### Test Endpoints
+```bash
+# Test Massive.com integration
+curl https://marketmind-worker.smah0085.workers.dev/api/test-massive
 
-- ✅ No API keys in frontend code
-- ✅ All sensitive keys stored in Cloudflare Worker secrets
-- ✅ `.dev.vars` properly gitignored
-- ✅ CORS configured for production endpoints
-- ✅ Git history cleaned of any past API key exposure
+# Test stock data
+curl "https://marketmind-worker.smah0085.workers.dev/api/stocks?symbol=AAPL&timeframe=1W"
 
----
+# Test quote
+curl "https://marketmind-worker.smah0085.workers.dev/api/quote?symbol=AAPL"
 
-## 📄 License
-
-MIT License - see LICENSE file for details
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-### Development Workflow
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly (type-check + build)
-5. Submit a pull request
+# Test news
+curl "https://marketmind-worker.smah0085.workers.dev/api/news?symbols=AAPL,TSLA"
+```
 
 ---
 
-## 🙏 Acknowledgments
+## 📄 **License**
 
-- Market data provided by Finnhub, Marketaux, OilPriceAPI, and Gold API
-- AI powered by Google Gemini
-- Charts by Recharts
-- Hosted on Cloudflare Workers and GitHub Pages
+MIT
 
 ---
 
-**MarketMind** - Real-time financial intelligence at your fingertips 📊✨
+## 🤝 **Contributing**
 
-For questions or issues, please open an issue on GitHub.
+Contributions welcome! Please open an issue first to discuss proposed changes.

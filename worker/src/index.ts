@@ -67,9 +67,9 @@ export default {
             }
 
             // TEMPORARY: Test Alpha Vantage API access
-            if (path === '/api/test-alphavantage' && request.method === 'GET') {
-                const { testAlphaVantageCandles } = await import('./integrations/alphavantage');
-                const result = await testAlphaVantageCandles(env);
+            if (path === '/api/test-massive' && request.method === 'GET') {
+                const { testMassiveCandles } = await import('./integrations/massive');
+                const result = await testMassiveCandles(env);
                 return new Response(JSON.stringify(result, null, 2), {
                     headers: {
                         'Content-Type': 'application/json',

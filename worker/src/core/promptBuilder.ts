@@ -5,7 +5,7 @@ import type { PricePoint, NewsArticle } from '../core/types';
 interface PromptInput {
     assetType: 'stock' | 'oil' | 'metal';
     symbol?: string;
-    timeframe: '1D' | '1W' | '1M';
+    timeframe: '1D' | '1W' | '1M' | '3M' | '1Y';
     chartData: PricePoint[];
     news: NewsArticle[];
     question: string;

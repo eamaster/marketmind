@@ -405,9 +405,9 @@ export function StockChart({
                 <div>
                     <span className="font-semibold">Data Source Information:</span>
                     <ul className="list-disc list-inside mt-1 space-y-0.5 opacity-90">
-                        <li>Charts use <strong>Alpha Vantage</strong> (End-of-Day data, updated daily).</li>
+                        <li>Charts use <strong>Massive.com</strong> (End-of-Day data, 5 calls/min free tier).</li>
                         <li>Real-time quotes use <strong>Finnhub</strong> (Free tier).</li>
-                        <li><strong>Note:</strong> Chart data is limited to 25 requests per day on the free tier.</li>
+                        <li><strong>Note:</strong> Historical data updates after market close (~4 PM ET).</li>
                     </ul>
                 </div>
             </div>

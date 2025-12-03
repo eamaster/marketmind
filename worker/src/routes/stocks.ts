@@ -1,5 +1,5 @@
 import type { Env, AssetDataResponse } from '../core/types';
-import { getAlphaVantageCandles } from '../integrations/alphavantage';
+import { getMassiveCandles } from '../integrations/massive';
 
 export async function handleStocksRequest(
     request: Request,
@@ -18,8 +18,8 @@ export async function handleStocksRequest(
     }
 
     try {
-        // Use Alpha Vantage for candles (Finnhub free tier blocks this)
-        const data = await getAlphaVantageCandles(symbol, timeframe, env);
+        // Use Massive.com (formerly Polygon.io) for candles
+        const data = await getMassiveCandles(symbol, timeframe, env);
 
         const response: AssetDataResponse = {
             data,
@@ -42,7 +42,7 @@ export async function handleStocksRequest(
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
         // Detect rate limit errors
-        const isRateLimit = errorMessage.includes('rate limit') || errorMessage.includes('25 requests');
+        const isRateLimit = errorMessage.includes('rate limit') || errorMessage.includes('5 requests');
 
         return new Response(
             JSON.stringify({

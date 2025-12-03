@@ -25,18 +25,18 @@ export interface SentimentSummary {
 }
 
 export type AssetType = 'stock' | 'oil' | 'metal';
-export type Timeframe = '1D' | '1W' | '1M';
+export type Timeframe = '1D' | '1W' | '1M' | '3M' | '1Y';
 
 // Environment bindings interface
 export interface Env {
+    FINNHUB_API_KEY?: string;
+    MASSIVE_API_KEY?: string;
+    MARKETMIND_CACHE?: KVNamespace;
+    MARKETAUX_API_TOKEN?: string;
     OILPRICE_API_KEY?: string;
     GOLD_API_KEY?: string;
-    FINNHUB_API_KEY?: string; // Keep for quotes
-    ALPHAVANTAGE_API_KEY?: string; // NEW: For candles
-    MARKETAUX_API_TOKEN?: string;
     GEMINI_API_KEY?: string;
     WORKER_ENV?: string;
-    MARKETMIND_CACHE?: KVNamespace;
 }
 
 // API Request/Response types
