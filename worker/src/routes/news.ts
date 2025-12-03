@@ -1,6 +1,8 @@
 import type { Env, NewsResponse, AssetType, Timeframe } from '../core/types';
-import { getCachedData, setCachedData } from '../core/cache';
+import { KVCache } from '../core/cache';
 import { getNews } from '../integrations/marketaux';
+
+const NEWS_TTL = 30 * 60; // 30 minutes
 
 export async function handleNewsRequest(
     request: Request,
@@ -15,24 +17,31 @@ export async function handleNewsRequest(
     // Build cache key
     const cacheKey = `news:${assetType}:${symbol || 'general'}:${timeframe}`;
 
+    // Initialize KV cache if available
+    const cache = env.MARKETMIND_CACHE ? new KVCache(env.MARKETMIND_CACHE) : null;
+
     try {
-        // Try to get from cache first
-        const cached = await getCachedData<NewsResponse>(cacheKey);
-        if (cached) {
-            return new Response(JSON.stringify(cached), {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Cache': 'HIT',
-                    ...corsHeaders,
-                },
-            });
+        // 1. Check KV cache first (fresh data)
+        if (cache) {
+            const cached = await cache.get<NewsResponse>(cacheKey);
+            if (cached && !cached.isStale) {
+                return new Response(JSON.stringify(cached.data), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Cache': 'HIT',
+                        ...corsHeaders,
+                    },
+                });
+            }
         }
 
-        // Not in cache, fetch from Marketaux
+        // 2. Not in cache, fetch from Marketaux
         const newsData = await getNews(assetType, symbol, timeframe, env);
 
-        // Cache for 30 minutes
-        await setCachedData(cacheKey, newsData, 30 * 60);
+        // Store in cache
+        if (cache) {
+            await cache.set(cacheKey, newsData, NEWS_TTL);
+        }
 
         return new Response(JSON.stringify(newsData), {
             headers: {
@@ -42,6 +51,21 @@ export async function handleNewsRequest(
             },
         });
     } catch (error) {
+        // 3. Try stale cache on error
+        if (cache) {
+            const staleData = await cache.getStale<NewsResponse>(cacheKey);
+            if (staleData) {
+                return new Response(JSON.stringify(staleData), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Cache': 'STALE',
+                        ...corsHeaders,
+                    },
+                });
+            }
+        }
+
+        // 4. No cache available, return error
         return new Response(
             JSON.stringify({
                 error: 'Failed to fetch news data',

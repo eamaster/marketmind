@@ -397,6 +397,20 @@ export function StockChart({
                     <Share2 size={20} />
                 </button>
             </div>
-        </div>
+
+
+            {/* DATA SOURCE DISCLAIMER */}
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg text-xs text-blue-600 dark:text-blue-400 flex items-start gap-2">
+                <div className="mt-0.5">ℹ️</div>
+                <div>
+                    <span className="font-semibold">Data Source Information:</span>
+                    <ul className="list-disc list-inside mt-1 space-y-0.5 opacity-90">
+                        <li>Charts use <strong>Alpha Vantage</strong> (End-of-Day data, updated daily).</li>
+                        <li>Real-time quotes use <strong>Finnhub</strong> (Free tier).</li>
+                        <li><strong>Note:</strong> Chart data is limited to 25 requests per day on the free tier.</li>
+                    </ul>
+                </div>
+            </div>
+        </div >
     );
 }

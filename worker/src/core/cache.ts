@@ -1,49 +1,62 @@
-// Cache helpers using Cloudflare Workers Cache API
+// Cloudflare KV-based caching with stale fallback strategy
+// Never generates mock data - always returns real market data (fresh or stale)
 
-const CACHE_VERSION = 'v1';
-const DEFAULT_TTL = 30 * 60; // 30 minutes in seconds
-
-export async function getCachedData<T>(key: string): Promise<T | null> {
-    const cache = caches.default;
-    const cacheKey = `${CACHE_VERSION}:${key}`;
-    const cacheUrl = new URL(`https://cache.marketmind/${cacheKey}`);
-
-    const response = await cache.match(cacheUrl);
-
-    if (!response) {
-        return null;
-    }
-
-    try {
-        return await response.json();
-    } catch {
-        return null;
-    }
+export interface CacheEntry<T> {
+    data: T;
+    timestamp: number;
+    expiresAt: number;
 }
 
-export async function setCachedData<T>(
-    key: string,
-    data: T,
-    ttl: number = DEFAULT_TTL
-): Promise<void> {
-    const cache = caches.default;
-    const cacheKey = `${CACHE_VERSION}:${key}`;
-    const cacheUrl = new URL(`https://cache.marketmind/${cacheKey}`);
+export class KVCache {
+    constructor(private kv: KVNamespace) { }
 
-    const response = new Response(JSON.stringify(data), {
-        headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': `max-age=${ttl}`,
-        },
-    });
+    /**
+     * Get cached data and check if it's stale
+     * @returns null if no cache exists, otherwise returns data with staleness indicator
+     */
+    async get<T>(key: string): Promise<{ data: T; isStale: boolean } | null> {
+        const raw = await this.kv.get(key, 'json');
+        if (!raw) return null;
 
-    await cache.put(cacheUrl, response);
-}
+        const entry = raw as CacheEntry<T>;
+        const now = Date.now();
+        const isStale = now > entry.expiresAt;
 
-export async function invalidateCache(key: string): Promise<void> {
-    const cache = caches.default;
-    const cacheKey = `${CACHE_VERSION}:${key}`;
-    const cacheUrl = new URL(`https://cache.marketmind/${cacheKey}`);
+        return { data: entry.data, isStale };
+    }
 
-    await cache.delete(cacheUrl);
+    /**
+     * Store data in KV cache with TTL for freshness detection
+     * @param ttlSeconds Time in seconds before data is considered stale
+     */
+    async set<T>(key: string, data: T, ttlSeconds: number): Promise<void> {
+        const entry: CacheEntry<T> = {
+            data,
+            timestamp: Date.now(),
+            expiresAt: Date.now() + ttlSeconds * 1000,
+        };
+
+        // Store in KV with 7-day expiration (allows stale fallback)
+        // KV will auto-delete after 7 days if not refreshed
+        await this.kv.put(key, JSON.stringify(entry), {
+            expirationTtl: 60 * 60 * 24 * 7, // 7 days
+        });
+    }
+
+    /**
+     * Get stale data (ignores expiration check)
+     * Used as last-resort fallback when API fails
+     */
+    async getStale<T>(key: string): Promise<T | null> {
+        const raw = await this.kv.get(key, 'json');
+        if (!raw) return null;
+        return (raw as CacheEntry<T>).data;
+    }
+
+    /**
+     * Delete cache entry
+     */
+    async delete(key: string): Promise<void> {
+        await this.kv.delete(key);
+    }
 }

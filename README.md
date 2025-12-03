@@ -39,13 +39,39 @@ Frontend (React + Vite + TailwindCSS)
           ↓
 Cloudflare Worker (BFF Layer)
           ↓
+  ┌─────────────────┐
+  │ Cloudflare KV   │ ← Caching Layer (10s-60s TTL)
+  │  (Cache Store)  │   Stale fallback (up to 7 days)
+  └─────────────────┘
+          ↓
     External APIs
-    ├── Twelve Data (Stocks)
+    ├── Finnhub (Stocks) - 60 calls/min
     ├── Marketaux (News)
     ├── OilPriceAPI (Energy)
     ├── Gold API (Metals)
     └── Google Gemini (AI)
 ```
+
+### Caching Strategy
+
+MarketMind uses **Cloudflare KV** for intelligent caching with stale fallback:
+
+1. **Fresh Cache (Primary)**: Return cached data if within TTL
+   - Quotes: 10 seconds TTL
+   - Candles: 60 seconds TTL
+
+2. **API Call (On Cache Miss)**: Fetch from external API and cache response
+
+3. **Stale Fallback (On API Failure)**: Return expired cache data
+   - Better to show 5-minute-old real data than errors
+   - Cache retained for up to 7 days
+
+4. **Error (No Cache Available)**: Return HTTP 429/503
+   - Only occurs when both API fails AND no cache exists
+
+**❌ No Mock Data**: This app never generates fake data. All responses are real market data (fresh, cached, or stale).
+
+**KV Free Tier**: 100,000 reads/day, 1,000 writes/day (sufficient for most use cases)
 
 ### Project Structure
 
@@ -74,7 +100,7 @@ marketmind/
 │   │   │   ├── quote.ts
 │   │   │   └── aiAnalyze.ts
 │   │   ├── integrations/ # External API clients
-│   │   │   ├── twelvedata.ts
+│   │   │   ├── finnhub.ts
 │   │   │   ├── oilprice.ts
 │   │   │   ├── goldApi.ts
 │   │   │   ├── marketaux.ts
@@ -93,14 +119,12 @@ marketmind/
 
 - **Node.js** 18+ and npm
 - **Cloudflare account** (for Worker deployment)
-- **API Keys** (optional for development, required for production):
-  - [Twelve Data](https://twelvedata.com/) - Stock market data
+- **API Keys** (required):
+  - [Finnhub](https://finnhub.io/register) - Stock market data (Free tier: 60 calls/min)
   - [Marketaux](https://www.marketaux.com/) - Financial news
   - [OilPriceAPI](https://www.oilpriceapi.com/) - Energy commodities
   - [Gold API](https://www.goldapi.io/) - Precious metals
   - [Google AI Studio](https://aistudio.google.com/app/apikey) - Gemini API
-
-> **Note:** The application includes mock data fallback for all APIs. You can run it locally without API keys for development and testing.
 
 ---
 
@@ -125,17 +149,22 @@ cd ../worker
 npm install
 ```
 
-#### 3. Configure API Keys (Optional)
+#### 3. Configure API Keys
 
 Create `worker/.dev.vars` file for local development:
 
+```bash
+cp worker/.dev.vars.example worker/.dev.vars
+```
+
+Then edit `worker/.dev.vars` with your actual API keys:
+
 ```env
-# Optional - app will use mock data if not provided
-TWELVEDATA_API_KEY=your_twelvedata_api_key
-MARKETAUX_API_TOKEN=your_marketaux_token
-OILPRICE_API_KEY=your_oilprice_api_key
-GOLD_API_KEY=your_gold_api_key
-GEMINI_API_KEY=your_gemini_api_key
+FINNHUB_API_KEY=your_actual_key_here
+MARKETAUX_API_TOKEN=your_token_here
+OILPRICE_API_KEY=your_key_here
+GOLD_API_KEY=your_key_here
+GEMINI_API_KEY=your_key_here
 ```
 
 > **Important:** The `.dev.vars` file is gitignored and should never be committed to version control.
@@ -188,12 +217,19 @@ npm run deploy
 
 ### Worker → Cloudflare
 
-**One-Time Setup - Configure Secrets:**
+**One-Time Setup:**
+
+1. **Create KV Namespace** (if not already created):
 ```bash
 cd worker
+wrangler kv namespace create MARKETMIND_CACHE
+# Copy the returned ID to wrangler.toml
+```
 
+2. **Configure Secrets**:
+```bash
 # Set production API keys as Cloudflare secrets
-wrangler secret put TWELVEDATA_API_KEY
+wrangler secret put FINNHUB_API_KEY
 wrangler secret put MARKETAUX_API_TOKEN
 wrangler secret put OILPRICE_API_KEY
 wrangler secret put GOLD_API_KEY
@@ -240,34 +276,50 @@ cd frontend && npm run lint
 
 ## 🔑 API Integration Details
 
-### Twelve Data (Stock Data)
-- **Endpoint:** Time series and quote endpoints
-- **Free Tier:** 800 requests/day, 1-minute intervals supported
-- **Fallback:** Mock data with realistic price generation
-- **Rate Limit:** 8 requests/minute (free tier)
+### Hybrid Stock Data Architecture
+MarketMind uses a hybrid approach to provide the best free-tier experience:
+
+#### 1. Finnhub (Real-time Quotes)
+- **Purpose:** Real-time price updates and percentage changes
+- **Limit:** 60 calls/minute
+- **Status:** Working perfectly for quotes
+- **Documentation:** [https://finnhub.io/docs/api](https://finnhub.io/docs/api)
+
+#### 2. Alpha Vantage (Historical Charts)
+- **Purpose:** Daily candlestick data for charts
+- **Limit:** 25 calls/day (Free Tier)
+- **Rate Limit Protection:** 2.5s delay between calls
+- **Caching:** Aggressive KV caching to minimize API usage
+- **Fallback:** Stale cache is served if API limit is reached
+- **Documentation:** [https://www.alphavantage.co/documentation/](https://www.alphavantage.co/documentation/)
+
+### Other APIs
+
+
+**Data Quality**: Daily candles provide accurate historical price data suitable for:
+- Long-term trend analysis
+- Daily price movements
+- Portfolio tracking
+- Multi-day comparisons
 
 ### Marketaux (Financial News)
 - **Endpoint:** News articles with sentiment scores
 - **Free Tier:** 100 requests/day
-- **Cache:** 30 minutes server-side caching
-- **Fallback:** Mock news articles
+- **Cache:** KV caching with 30-minute TTL
 
 ### OilPriceAPI (Energy Commodities)
 - **Endpoint:** Oil prices (WTI, Brent)
-- **Note:** Currently using mock data (API requires paid plan for historical data)
-- **Fallback:** Realistic mock data generation
+- **Note:** Requires paid plan for historical data
 
 ### Gold API (Precious Metals)
 - **Endpoint:** Gold and Silver prices
-- **Note:** API provides current price only
-- **Fallback:** Mock historical data for charts
+- **Note:** Provides current price only
 
 ### Google Gemini (AI Analysis)
 - **Model:** `gemini-3-pro-preview`
 - **Features:** Context-aware market analysis
 - **Input:** Chart data, news articles, and user questions
 - **Output:** Markdown-formatted AI insights
-- **Fallback:** Template-based mock responses
 
 ---
 
@@ -335,7 +387,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 🙏 Acknowledgments
 
-- Market data provided by Twelve Data, Marketaux, OilPriceAPI, and Gold API
+- Market data provided by Finnhub, Marketaux, OilPriceAPI, and Gold API
 - AI powered by Google Gemini
 - Charts by Recharts
 - Hosted on Cloudflare Workers and GitHub Pages

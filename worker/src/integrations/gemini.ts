@@ -75,7 +75,13 @@ export async function analyzeMarketContext(
             throw new Error(`Gemini API error: ${response.status} ${response.statusText} - ${errorText.substring(0, 200)}`);
         }
 
-        const data = await response.json();
+        const data = await response.json() as {
+            candidates?: Array<{
+                content?: {
+                    parts?: Array<{ text?: string }>;
+                };
+            }>;
+        };
         console.log('[Gemini] API Response received successfully');
         console.log('[Gemini] Response structure:', JSON.stringify(data, null, 2).substring(0, 500));
         console.log('[Gemini] Candidates count:', data.candidates?.length || 0);

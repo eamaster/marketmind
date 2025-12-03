@@ -10,6 +10,11 @@ compatibility_date = "2024-11-20"
 # Public configuration (non-sensitive)
 WORKER_ENV = "development"
 
+# KV Namespaces for caching
+[[kv_namespaces]]
+binding = "MARKETMIND_CACHE"
+id = "058d039ea4434a37930ef46065008254"
+
 # Secrets (set via wrangler secret put or dashboard):
 # - OILPRICE_API_KEY
 # - GOLD_API_KEY
