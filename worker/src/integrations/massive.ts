@@ -119,22 +119,22 @@ function getTimeframeParams(timeframe: Timeframe): { from: string; to: string } 
 
     switch (timeframe) {
         case '1D':
-            fromDate.setDate(today.getDate() - 2); // Get 2 days
+            fromDate.setDate(today.getDate() - 30); // 30 days for daily view
             break;
         case '1W':
-            fromDate.setDate(today.getDate() - 8); // Get 8 days
+            fromDate.setDate(today.getDate() - 90); // 90 days (~3 months) for weekly view
             break;
         case '1M':
-            fromDate.setDate(today.getDate() - 35); // Get 35 days
+            fromDate.setDate(today.getDate() - 180); // 180 days (~6 months) for monthly view
             break;
         case '3M':
-            fromDate.setDate(today.getDate() - 100); // Get 100 days
+            fromDate.setDate(today.getDate() - 270); // 270 days (~9 months) for 3-month view
             break;
         case '1Y':
-            fromDate.setDate(today.getDate() - 370); // Get 370 days
+            fromDate.setFullYear(today.getFullYear() - 2); // 2 years for yearly view
             break;
         default:
-            fromDate.setDate(today.getDate() - 35);
+            fromDate.setDate(today.getDate() - 30);
     }
 
     return {
