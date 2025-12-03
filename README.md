@@ -276,17 +276,31 @@ cd frontend && npm run lint
 
 ## 🔑 API Integration Details
 
-### Finnhub (Stock Data)
-- **Endpoint:** Stock candles and quotes
-- **Free Tier:** 60 API calls/minute
+### Hybrid Stock Data Architecture
+MarketMind uses a hybrid approach to provide the best free-tier experience:
+
+#### 1. Finnhub (Real-time Quotes)
+- **Purpose:** Real-time price updates and percentage changes
+- **Limit:** 60 calls/minute
+- **Status:** Working perfectly for quotes
 - **Documentation:** [https://finnhub.io/docs/api](https://finnhub.io/docs/api)
-- **Resolutions:** 
-  - 1D: 5-minute intervals
-  - 1W: 1-hour intervals
-  - 1M: Daily intervals (Free tier compatible)
-- **Caching:** 10s (quotes), 60s (candles)
-- **Fallback:** Stale cache (up to 7 days old) on API failures
-- **WebSocket Support:** Real-time quotes available
+
+#### 2. Alpha Vantage (Historical Charts)
+- **Purpose:** Daily candlestick data for charts
+- **Limit:** 25 calls/day (Free Tier)
+- **Rate Limit Protection:** 2.5s delay between calls
+- **Caching:** Aggressive KV caching to minimize API usage
+- **Fallback:** Stale cache is served if API limit is reached
+- **Documentation:** [https://www.alphavantage.co/documentation/](https://www.alphavantage.co/documentation/)
+
+### Other APIs
+
+
+**Data Quality**: Daily candles provide accurate historical price data suitable for:
+- Long-term trend analysis
+- Daily price movements
+- Portfolio tracking
+- Multi-day comparisons
 
 ### Marketaux (Financial News)
 - **Endpoint:** News articles with sentiment scores

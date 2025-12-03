@@ -1,5 +1,5 @@
 import type { Env, AssetDataResponse } from '../core/types';
-import { getStockCandles } from '../integrations/finnhub';
+import { getAlphaVantageCandles } from '../integrations/alphavantage';
 
 export async function handleStocksRequest(
     request: Request,
@@ -10,8 +10,16 @@ export async function handleStocksRequest(
     const symbol = url.searchParams.get('symbol') || 'AAPL';
     const timeframe = (url.searchParams.get('timeframe') || '1D') as '1D' | '1W' | '1M';
 
+    if (!symbol || !timeframe) {
+        return new Response(JSON.stringify({ error: 'Missing symbol or timeframe' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+    }
+
     try {
-        const data = await getStockCandles(symbol, timeframe, env);
+        // Use Alpha Vantage for candles (Finnhub free tier blocks this)
+        const data = await getAlphaVantageCandles(symbol, timeframe, env);
 
         const response: AssetDataResponse = {
             data,
@@ -29,22 +37,21 @@ export async function handleStocksRequest(
             },
         });
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        let status = 500;
+        console.error('[Stocks Route] Error:', error);
 
-        if (errorMessage.includes('429')) {
-            status = 429;
-        } else if (errorMessage.includes('401') || errorMessage.includes('403')) {
-            status = 401;
-        }
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+        // Detect rate limit errors
+        const isRateLimit = errorMessage.includes('rate limit') || errorMessage.includes('25 requests');
 
         return new Response(
             JSON.stringify({
                 error: 'Failed to fetch stock data',
                 message: errorMessage,
+                retryAfter: isRateLimit ? 60 : undefined, // Tell frontend to wait 60 seconds
             }),
             {
-                status,
+                status: isRateLimit ? 429 : 500,
                 headers: {
                     'Content-Type': 'application/json',
                     ...corsHeaders,

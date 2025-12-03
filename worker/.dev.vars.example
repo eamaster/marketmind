@@ -2,11 +2,15 @@
 # Copy this file to .dev.vars and fill in your actual API keys
 # Never commit .dev.vars to git!
 
-# Finnhub Stock API (Free tier: 60 calls/minute)
-# Get your key at: https://finnhub.io/register
+# Finnhub API (Real-time stock quotes)
+# Get your free API key at: https://finnhub.io/register
 FINNHUB_API_KEY=your_finnhub_api_key_here
 
-# Marketaux News API
+# Alpha Vantage API (Historical candles for charts)
+# Get your free API key at: https://www.alphavantage.co/support/#api-key
+ALPHAVANTAGE_API_KEY=your_alphavantage_api_key_here
+
+# Marketaux API (Financial news)
 # Get your key at: https://www.marketaux.com/
 MARKETAUX_API_TOKEN=your_marketaux_token_here
 

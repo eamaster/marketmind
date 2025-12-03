@@ -54,6 +54,30 @@ export default {
                 return await handleNewsRequest(request, env, corsHeaders);
             }
 
+            // TEMPORARY: Test Finnhub API access directly
+            if (path === '/api/test-finnhub' && request.method === 'GET') {
+                const { testFinnhubCandles } = await import('./integrations/finnhub');
+                const result = await testFinnhubCandles(env);
+                return new Response(JSON.stringify(result, null, 2), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...corsHeaders,
+                    },
+                });
+            }
+
+            // TEMPORARY: Test Alpha Vantage API access
+            if (path === '/api/test-alphavantage' && request.method === 'GET') {
+                const { testAlphaVantageCandles } = await import('./integrations/alphavantage');
+                const result = await testAlphaVantageCandles(env);
+                return new Response(JSON.stringify(result, null, 2), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...corsHeaders,
+                    },
+                });
+            }
+
             // AI analysis endpoint
             if (path === '/api/ai/analyze' && request.method === 'POST') {
                 const { handleAiAnalyzeRequest } = await import('./routes/aiAnalyze');

@@ -61,23 +61,35 @@ export async function getStockCandles(
 async function fetchCandles(symbol: string, timeframe: Timeframe, apiKey: string): Promise<PricePoint[]> {
     const { resolution, from, to } = getTimeframeParams(timeframe);
 
+    // Build URL with ALL required parameters
     const url = new URL('https://finnhub.io/api/v1/stock/candle');
-    url.searchParams.set('symbol', symbol);
+    url.searchParams.set('symbol', symbol.toUpperCase()); // Ensure uppercase
     url.searchParams.set('resolution', resolution);
     url.searchParams.set('from', from.toString());
     url.searchParams.set('to', to.toString());
-    url.searchParams.set('token', apiKey);
+    url.searchParams.set('token', apiKey); // Token as URL parameter
 
-    console.log(`[Finnhub] Fetching ${symbol} candles: ${timeframe} (resolution: ${resolution})`);
+    console.log(`[Finnhub] Fetching candles: ${url.toString().replace(apiKey, 'REDACTED')}`);
+    console.log(`[Finnhub] Parameters: symbol=${symbol.toUpperCase()}, resolution=${resolution}, from=${from}, to=${to}`);
 
-    const response = await fetch(url.toString());
+    const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+        },
+    });
 
     if (!response.ok) {
         const errorText = await response.text();
+        console.error(`[Finnhub] API Error ${response.status}:`, errorText);
         throw new Error(`Finnhub API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
+
+    // Log the raw response for debugging
+    console.log(`[Finnhub] Raw response for ${symbol}:`, JSON.stringify(data).substring(0, 200));
+
     return normalizeStockData(data);
 }
 
@@ -90,31 +102,32 @@ function enhanceError(error: any, apiKey: string): Error {
 }
 
 function getTimeframeParams(timeframe: Timeframe): { resolution: string; from: number; to: number } {
-    const now = Math.floor(Date.now() / 1000);
+    const now = Math.floor(Date.now() / 1000); // Current time in seconds
+    const oneDay = 24 * 60 * 60;
 
     switch (timeframe) {
         case '1D':
             return {
-                resolution: '5', // 5-minute intervals
-                from: now - 24 * 60 * 60,
+                resolution: 'D',
+                from: now - (2 * oneDay), // Get 2 days to ensure at least 1 candle
                 to: now,
             };
         case '1W':
             return {
-                resolution: '60', // 1-hour intervals
-                from: now - 7 * 24 * 60 * 60,
+                resolution: 'D',
+                from: now - (8 * oneDay), // Get 8 days to ensure 7 trading days
                 to: now,
             };
         case '1M':
             return {
-                resolution: 'D', // Daily intervals (Free tier compatible)
-                from: now - 30 * 24 * 60 * 60,
+                resolution: 'D',
+                from: now - (35 * oneDay), // Get 35 days to ensure 30 trading days
                 to: now,
             };
         default:
             return {
                 resolution: 'D',
-                from: now - 30 * 24 * 60 * 60,
+                from: now - (35 * oneDay),
                 to: now,
             };
     }
@@ -122,14 +135,22 @@ function getTimeframeParams(timeframe: Timeframe): { resolution: string; from: n
 
 function normalizeStockData(apiData: any): PricePoint[] {
     // Finnhub returns: { c: [close], h: [high], l: [low], o: [open], t: [timestamp], v: [volume], s: status }
+
+    // Check status first
+    if (apiData.s === 'no_data') {
+        console.warn('[Finnhub] No data available for this symbol/timeframe');
+        throw new Error('No data available from Finnhub');
+    }
+
     if (apiData.s !== 'ok') {
         console.warn('[Finnhub] API response status not OK:', apiData.s);
         throw new Error(`Finnhub API returned status: ${apiData.s}`);
     }
 
-    if (!apiData.t || apiData.t.length === 0) {
-        console.warn('[Finnhub] No timestamp data in response');
-        throw new Error('No data available from Finnhub');
+    // Verify we have timestamp data
+    if (!apiData.t || !Array.isArray(apiData.t) || apiData.t.length === 0) {
+        console.warn('[Finnhub] No timestamp data in response:', apiData);
+        throw new Error('No candle data available');
     }
 
     const data: PricePoint[] = [];
@@ -137,14 +158,15 @@ function normalizeStockData(apiData: any): PricePoint[] {
     for (let i = 0; i < apiData.t.length; i++) {
         data.push({
             timestamp: new Date(apiData.t[i] * 1000).toISOString(),
-            open: apiData.o?.[i],
-            high: apiData.h?.[i],
-            low: apiData.l?.[i],
+            open: apiData.o?.[i] ?? apiData.c[i],
+            high: apiData.h?.[i] ?? apiData.c[i],
+            low: apiData.l?.[i] ?? apiData.c[i],
             close: apiData.c[i],
-            volume: apiData.v?.[i],
+            volume: apiData.v?.[i] ?? 0,
         });
     }
 
+    console.log(`[Finnhub] Normalized ${data.length} candles`);
     return data;
 }
 
@@ -212,5 +234,34 @@ export async function getStockQuote(
 
         // 4. No cache available, throw error
         throw enhanceError(error, apiKey);
+    }
+}
+
+// TEMPORARY: Test function to verify API access
+export async function testFinnhubCandles(env: Env): Promise<any> {
+    const apiKey = env.FINNHUB_API_KEY;
+    if (!apiKey) {
+        return { error: 'No API key' };
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const from = now - (7 * 24 * 60 * 60); // 7 days ago
+
+    const url = `https://finnhub.io/api/v1/stock/candle?symbol=AAPL&resolution=D&from=${from}&to=${now}&token=${apiKey}`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        return {
+            status: response.status,
+            statusText: response.statusText,
+            data: data,
+            url: url.replace(apiKey, 'REDACTED'),
+        };
+    } catch (error) {
+        return {
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
     }
 }
