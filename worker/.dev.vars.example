@@ -8,7 +8,7 @@ FINNHUB_API_KEY=your_finnhub_api_key_here
 
 # Massive.com API (Historical candles for charts)
 # Get your free API key at: https://massive.com/register
-MASSIVE_API_KEY=GxDxMBKnAkJp46JRsoATwHQQBYrqXl6S
+MASSIVE_API_KEY=your_massive_api_key_here
 
 # Marketaux API (Financial news)
 # Get your key at: https://www.marketaux.com/
