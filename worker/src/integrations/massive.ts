@@ -117,21 +117,28 @@ function getTimeframeParams(timeframe: Timeframe): { from: string; to: string } 
 
     let fromDate = new Date(today);
 
+    // Massive.com free tier: END-OF-DAY data only
+    // Each candle = 1 trading day (~252 trading days per year)
     switch (timeframe) {
         case '1D':
-            fromDate.setDate(today.getDate() - 30); // 30 days for daily view
+            // Show 5 trading days (1 week)
+            fromDate.setDate(today.getDate() - 7); // 7 calendar days ≈ 5 trading days
             break;
         case '1W':
-            fromDate.setDate(today.getDate() - 90); // 90 days (~3 months) for weekly view
+            // Show 21 trading days (1 month)
+            fromDate.setDate(today.getDate() - 30); // 30 calendar days ≈ 21 trading days
             break;
         case '1M':
-            fromDate.setDate(today.getDate() - 180); // 180 days (~6 months) for monthly view
+            // Show 63 trading days (3 months)
+            fromDate.setDate(today.getDate() - 90); // 90 calendar days ≈ 63 trading days
             break;
         case '3M':
-            fromDate.setDate(today.getDate() - 270); // 270 days (~9 months) for 3-month view
+            // Show 126 trading days (6 months)
+            fromDate.setDate(today.getDate() - 180); // 180 calendar days ≈ 126 trading days
             break;
         case '1Y':
-            fromDate.setFullYear(today.getFullYear() - 2); // 2 years for yearly view
+            // Show 252 trading days (1 year)
+            fromDate.setFullYear(today.getFullYear() - 1); // 365 calendar days ≈ 252 trading days
             break;
         default:
             fromDate.setDate(today.getDate() - 30);

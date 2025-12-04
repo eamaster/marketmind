@@ -1,4 +1,5 @@
 // Thin fetch wrapper for calling Worker API endpoints
+import type { Timeframe } from './types';
 
 // In development: use Vite proxy (/api -> localhost:8787)
 // In production (GitHub Pages): use deployed Cloudflare Worker
@@ -70,7 +71,7 @@ export const apiClient = {
     getAssetData: (params: {
         assetType: 'stock' | 'oil' | 'metal';
         symbol: string;
-        timeframe: '1D' | '1W' | '1M';
+        timeframe: Timeframe;
     }) => {
         const { assetType, symbol, timeframe } = params;
         const endpoint =
@@ -91,7 +92,7 @@ export const apiClient = {
     getNews: (params: {
         assetType: 'stock' | 'oil' | 'metal';
         symbol?: string;
-        timeframe: '1D' | '1W' | '1M';
+        timeframe: Timeframe;
     }) => {
         const { assetType, symbol, timeframe } = params;
         const query = new URLSearchParams({
@@ -106,7 +107,7 @@ export const apiClient = {
     analyzeWithAi: (data: {
         assetType: 'stock' | 'oil' | 'metal';
         symbol?: string;
-        timeframe: '1D' | '1W' | '1M';
+        timeframe: Timeframe;
         chartData: any[];
         news: any[];
         question: string;

@@ -149,17 +149,26 @@ export function StockChart({
     });
 
     // Calculate stats
-    const lastClose = data[data.length - 1]?.close || 0;
-    const currentPrice = overridePrice || lastClose;
-    const previousPrice = data[0]?.close || currentPrice;
-    const priceChange = ((currentPrice - previousPrice) / previousPrice) * 100;
-    const priceChangeAbsolute = currentPrice - previousPrice;
+    // CRITICAL: Price change is calculated from FIRST candle (timeframe start) to LATEST candle
+    // This gives accurate change percentage for the selected timeframe
+    const firstCandle = data[0];
+    const lastCandle = data[data.length - 1];
+
+    const baselinePrice = firstCandle?.close || 0;
+    const latestPrice = lastCandle?.close || 0;
+    const currentPrice = overridePrice || latestPrice;
+
+    // Calculate change from timeframe start (first candle) to latest candle
+    const priceChange = ((latestPrice - baselinePrice) / baselinePrice) * 100;
+    const priceChangeAbsolute = latestPrice - baselinePrice;
 
     const stats = {
-        open: data[0]?.open || currentPrice,
+        open: firstCandle?.open || currentPrice,
         high: Math.max(...data.map((d) => d.high || d.close)),
         low: Math.min(...data.map((d) => d.low || d.close)),
         volume: data.reduce((sum, d) => sum + (d.volume || 0), 0),
+        baselinePrice,
+        latestPrice,
     };
 
     const { support, resistance } = calculateSupportResistance(data);
@@ -219,9 +228,9 @@ export function StockChart({
 
             {/* PRICE & STATS SECTION */}
             <div>
-                <div className="flex items-baseline gap-3">
+                <div className="flex items-baseline gap-3 flex-wrap">
                     <PriceAnimated
-                        value={currentPrice}
+                        value={latestPrice}
                         className="text-3xl font-bold font-mono text-slate-900 dark:text-slate-100"
                     />
                     <span
@@ -232,6 +241,27 @@ export function StockChart({
                         {priceChangeAbsolute >= 0 ? '+' : ''}
                         {priceChangeAbsolute.toFixed(2)})
                     </span>
+
+                    {/* Data Freshness Badge */}
+                    {(() => {
+                        const latestDate = new Date(lastCandle.timestamp);
+                        const today = new Date();
+                        const daysDiff = Math.floor((today.getTime() - latestDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                        if (daysDiff === 0) {
+                            return <span className="px-2 py-1 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full">Today</span>;
+                        } else if (daysDiff === 1) {
+                            return <span className="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full">1 day old</span>;
+                        } else {
+                            return <span className="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full">{daysDiff} days old</span>;
+                        }
+                    })()}
+                </div>
+
+                {/* Timeframe Context */}
+                <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Change from {new Date(firstCandle.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {' '}(${baselinePrice.toFixed(2)}) to {new Date(lastCandle.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </div>
 
                 {/* Mini stats row */}
@@ -418,11 +448,12 @@ export function StockChart({
             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg text-xs text-blue-600 dark:text-blue-400 flex items-start gap-2">
                 <div className="mt-0.5">ℹ️</div>
                 <div>
-                    <span className="font-semibold">Data Source Information:</span>
+                    <span className="font-semibold">Chart Data Information:</span>
                     <ul className="list-disc list-inside mt-1 space-y-0.5 opacity-90">
-                        <li>Charts use <strong>Massive.com</strong> (End-of-Day data, 5 calls/min free tier).</li>
-                        <li>Real-time quotes use <strong>Finnhub</strong> (Free tier).</li>
-                        <li><strong>Note:</strong> Historical data updates after market close (~4 PM ET).</li>
+                        <li><strong>Chart Data:</strong> End-of-day prices from Massive.com (1-2 business days delayed on free tier).</li>
+                        <li><strong>Watchlist Quotes:</strong> Real-time prices from Finnhub (updates every 10s).</li>
+                        <li><strong>Price Changes:</strong> Calculated from timeframe start to latest candle close.</li>
+                        <li><strong>Note:</strong> Each candle = 1 trading day. No intraday data on free tier.</li>
                     </ul>
                 </div>
             </div>

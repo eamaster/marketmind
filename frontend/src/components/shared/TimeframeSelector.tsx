@@ -5,8 +5,18 @@ interface TimeframeSelectorProps {
     onChange: (timeframe: Timeframe) => void;
 }
 
-// Only 1D, 1W, 1M allowed - optimized for Twelve Data API
-const timeframes: Timeframe[] = ['1D', '1W', '1M'];
+// Mapping of internal timeframe values to user-friendly labels
+// Internal: '1D', '1W', '1M', '3M', '1Y' (for backend compatibility)
+// Display: '5D', '1M', '3M', '6M', '1Y' (what users actually see)
+const timeframeLabels: Record<Timeframe, string> = {
+    '1D': '5D',   // 5 trading days (1 week)
+    '1W': '1M',   // 1 month of daily data  
+    '1M': '3M',   // 3 months of daily data
+    '3M': '6M',   // 6 months of daily data
+    '1Y': '1Y',   // 1 year of daily data
+};
+
+const timeframes: Timeframe[] = ['1D', '1W', '1M', '3M', '1Y'];
 
 export function TimeframeSelector({ value, onChange }: TimeframeSelectorProps) {
     return (
@@ -20,8 +30,9 @@ export function TimeframeSelector({ value, onChange }: TimeframeSelectorProps) {
                         : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                         }`}
                     aria-pressed={value === tf}
+                    title={`Show ${timeframeLabels[tf]} of daily candles`}
                 >
-                    {tf}
+                    {timeframeLabels[tf]}
                 </button>
             ))}
         </div>

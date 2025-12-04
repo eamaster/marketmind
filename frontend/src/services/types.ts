@@ -62,7 +62,7 @@ export interface AiAnalyzeResponse {
 // ===========================
 
 export type AssetType = 'stock' | 'oil' | 'metal';
-export type Timeframe = '1D' | '1W' | '1M';
+export type Timeframe = '1D' | '1W' | '1M' | '3M' | '1Y';
 
 export type OilCode = 'WTI_USD' | 'BRENT_USD';
 export type MetalSymbol = 'XAU' | 'XAG';
