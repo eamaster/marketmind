@@ -119,11 +119,26 @@ export function StockChart({
             ? (closePrice >= openPrice ? '#10b981' : '#ef4444')
             : (closePrice >= (data[index - 1].close || 0) ? '#10b981' : '#ef4444');
 
-        return {
-            time: new Date(point.timestamp).toLocaleTimeString([], {
+        // Format time based on timeframe
+        const date = new Date(point.timestamp);
+        let timeLabel: string;
+
+        // For daily/weekly/monthly/yearly views, show dates, not times
+        if (timeframe === '1D' || timeframe === '1W' || timeframe === '1M' || timeframe === '3M' || timeframe === '1Y') {
+            timeLabel = date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+            });
+        } else {
+            // For intraday (if we ever add it), show time
+            timeLabel = date.toLocaleTimeString([], {
                 hour: '2-digit',
                 minute: '2-digit',
-            }),
+            });
+        }
+
+        return {
+            time: timeLabel,
             close: closePrice,
             open: openPrice,
             high: point.high,
