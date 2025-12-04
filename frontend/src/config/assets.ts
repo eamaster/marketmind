@@ -31,7 +31,7 @@ export const METAL_SYMBOLS: MetalSymbol[] = [
 export const DEFAULT_TIMEFRAME: Timeframe = '1D';
 
 export const TIMEFRAME_LABELS: Record<Timeframe, string> = {
-    '1D': '5 Days',
+    '1D': '7 Days',
     '1W': '1 Month',
     '1M': '3 Months',
     '3M': '6 Months',

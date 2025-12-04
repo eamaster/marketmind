@@ -12,6 +12,7 @@ export function useAssetData({ assetType, symbol, timeframe }: UseAssetDataParam
     const [data, setData] = useState<PricePoint[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
+    const [isLive, setIsLive] = useState(false);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -22,10 +23,12 @@ export function useAssetData({ assetType, symbol, timeframe }: UseAssetDataParam
             const response = await apiClient.getAssetData({ assetType, symbol, timeframe });
             console.log('API response:', response);
             setData(response.data || []);
+            setIsLive(response.isLive || false); // Store isLive flag from API
         } catch (err) {
             console.error('Fetch error:', err);
             setError(err instanceof Error ? err : new Error('Failed to fetch asset data'));
             setData(null);
+            setIsLive(false);
         } finally {
             setIsLoading(false);
         }
@@ -40,6 +43,7 @@ export function useAssetData({ assetType, symbol, timeframe }: UseAssetDataParam
         data,
         isLoading,
         error,
+        isLive,
         refetch: fetchData,
     };
 }

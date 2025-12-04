@@ -29,6 +29,7 @@ interface StockChartProps {
     availableSymbols?: Array<{ value: string; label: string }>;
     onUseForAI?: () => void;
     currentPrice?: number; // Optional override for header price
+    isLive?: boolean; // Whether data includes today's live candle
 }
 
 // Default stock symbols
@@ -91,6 +92,7 @@ export function StockChart({
     availableSymbols,
     onUseForAI,
     currentPrice: overridePrice,
+    isLive = false,
 }: StockChartProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -450,10 +452,11 @@ export function StockChart({
                 <div>
                     <span className="font-semibold">Chart Data Information:</span>
                     <ul className="list-disc list-inside mt-1 space-y-0.5 opacity-90">
-                        <li><strong>Chart Data:</strong> End-of-day prices from Massive.com (1-2 business days delayed on free tier).</li>
+                        <li><strong>Historical Data:</strong> End-of-day candles from Massive.com (1-2 days delayed).</li>
+                        {isLive && <li><strong>Today's Candle:</strong> Live from Finnhub (updates in real-time during market hours 9:30 AM - 4:00 PM ET).</li>}
+                        {!isLive && <li><strong>Market Status:</strong> Closed - showing last available data.</li>}
                         <li><strong>Watchlist Quotes:</strong> Real-time prices from Finnhub (updates every 10s).</li>
                         <li><strong>Price Changes:</strong> Calculated from timeframe start to latest candle close.</li>
-                        <li><strong>Note:</strong> Each candle = 1 trading day. No intraday data on free tier.</li>
                     </ul>
                 </div>
             </div>

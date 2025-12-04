@@ -7,9 +7,9 @@ interface TimeframeSelectorProps {
 
 // Mapping of internal timeframe values to user-friendly labels
 // Internal: '1D', '1W', '1M', '3M', '1Y' (for backend compatibility)
-// Display: '5D', '1M', '3M', '6M', '1Y' (what users actually see)
+// Display: '7D', '1M', '3M', '6M', '1Y' (what users actually see)
 const timeframeLabels: Record<Timeframe, string> = {
-    '1D': '5D',   // 5 trading days (1 week)
+    '1D': '7D',   // 7 trading days (1 week) - CHANGED FROM 5D
     '1W': '1M',   // 1 month of daily data  
     '1M': '3M',   // 3 months of daily data
     '3M': '6M',   // 6 months of daily data

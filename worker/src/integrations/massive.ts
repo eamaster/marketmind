@@ -121,8 +121,8 @@ function getTimeframeParams(timeframe: Timeframe): { from: string; to: string } 
     // Each candle = 1 trading day (~252 trading days per year)
     switch (timeframe) {
         case '1D':
-            // Show 5 trading days (1 week)
-            fromDate.setDate(today.getDate() - 7); // 7 calendar days ≈ 5 trading days
+            // Show 7 trading days (1 week) - CHANGED FROM 5D
+            fromDate.setDate(today.getDate() - 10); // 10 calendar days ≈ 7 trading days
             break;
         case '1W':
             // Show 21 trading days (1 month)
