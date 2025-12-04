@@ -1,173 +1,205 @@
 import type { Env, PricePoint, Timeframe } from '../core/types';
+import { KVCache } from '../core/cache';
 
-// OilPriceAPI client
-// Docs: https://docs.oilpriceapi.com/
+// Oil prices using Massive.com (Polygon.io) - REAL DATA
+// Docs: https://massive.com/docs/rest/quickstart
+
+const CANDLES_TTL = 60; // 60 seconds cache for real-time feel
+
+// Map oil codes to Massive.com forex pairs
+function convertToMassiveSymbol(code: string): string {
+    const mapping: Record<string, string> = {
+        'WTI_USD': 'C:WTIUSD',    // WTI Crude Oil
+        'BRENT_USD': 'C:BRTUSD',  // Brent Crude Oil
+        'NATURAL_GAS': 'C:NGUSD', // Natural Gas (if available)
+    };
+    return mapping[code] || code;
+}
+
+function getTimeframeParams(timeframe: Timeframe): { from: string; to: string } {
+    const today = new Date();
+    const formatDate = (date: Date) => date.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    let fromDate = new Date(today);
+
+    switch (timeframe) {
+        case '1D':
+            fromDate.setDate(today.getDate() - 10); // 10 calendar days ≈ 7 trading days
+            break;
+        case '1W':
+            fromDate.setDate(today.getDate() - 30); // 30 calendar days ≈ 21 trading days
+            break;
+        case '1M':
+            fromDate.setDate(today.getDate() - 90); // 90 calendar days ≈ 63 trading days
+            break;
+        case '3M':
+            fromDate.setDate(today.getDate() - 180); // 180 calendar days ≈ 126 trading days
+            break;
+        case '1Y':
+            fromDate.setFullYear(today.getFullYear() - 1); // 365 calendar days ≈ 252 trading days
+            break;
+        default:
+            fromDate.setDate(today.getDate() - 30);
+    }
+
+    return {
+        from: formatDate(fromDate),
+        to: formatDate(today),
+    };
+}
+
+async function fetchMassiveCandles(
+    code: string,
+    timeframe: Timeframe,
+    apiKey: string
+): Promise<PricePoint[]> {
+    const { from, to } = getTimeframeParams(timeframe);
+    const massiveSymbol = convertToMassiveSymbol(code);
+
+    // Use api.polygon.io (backward compatible endpoint)
+    const url = `https://api.polygon.io/v2/aggs/ticker/${massiveSymbol}/range/1/day/${from}/${to}?adjusted=true&sort=asc&apiKey=${apiKey}`;
+
+    console.log(`[Massive/Oil] Fetching ${code} (${massiveSymbol}) from ${from} to ${to}`);
+    console.log(`[Massive/Oil] URL: ${url.replace(apiKey, 'REDACTED')}`);
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[Massive/Oil] API Error: ${response.status} ${response.statusText}`, errorText);
+        throw new Error(`Massive.com API error: ${response.status} ${response.statusText}`);
+    }
+
+    const json = await response.json() as {
+        status: string;
+        results?: Array<{
+            t: number;  // timestamp in milliseconds
+            o: number;  // open
+            h: number;  // high
+            l: number;  // low
+            c: number;  // close
+            v: number;  // volume
+        }>;
+    };
+
+    console.log(`[Massive/Oil] Response status: ${json.status}`);
+    console.log(`[Massive/Oil] First 500 chars:`, JSON.stringify(json).substring(0, 500));
+
+    if (json.status !== 'OK' && json.status !== 'DELAYED') {
+        console.error(`[Massive/Oil] Unexpected status: ${json.status}`);
+        throw new Error(`Massive.com returned status: ${json.status}`);
+    }
+
+    if (!json.results || json.results.length === 0) {
+        console.error(`[Massive/Oil] No candles returned for ${code}`);
+        throw new Error('No candle data available');
+    }
+
+    const candles: PricePoint[] = json.results.map(candle => ({
+        timestamp: new Date(candle.t).toISOString(),
+        open: candle.o,
+        high: candle.h,
+        low: candle.l,
+        close: candle.c,
+        volume: candle.v,
+    }));
+
+    // Log first and last candle for verification
+    const firstCandle = candles[0];
+    const lastCandle = candles[candles.length - 1];
+
+    console.log(`[Massive/Oil] ${code}: ${candles.length} candles`);
+    console.log(`[Massive/Oil] First: ${firstCandle.timestamp} @ $${firstCandle.close}`);
+    console.log(`[Massive/Oil] Last: ${lastCandle.timestamp} @ $${lastCandle.close}`);
+
+    // Data freshness validation
+    const lastCandleDate = new Date(lastCandle.timestamp);
+    const today = new Date();
+    const daysSinceLastCandle = Math.floor((today.getTime() - lastCandleDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    console.log(`[Massive/Oil] Data freshness: ${daysSinceLastCandle} days old`);
+
+    if (daysSinceLastCandle > 5) {
+        console.warn(`[Massive/Oil] ⚠️ WARNING: Data is ${daysSinceLastCandle} days old!`);
+    }
+
+    return candles;
+}
 
 export async function getOilPrice(
     code: string,
     timeframe: Timeframe,
     env: Env
 ): Promise<PricePoint[]> {
-    // Always use mock data for reliable historical charts
-    // OilPrice API requires paid plan for historical data
-    console.log(`[OilPrice] Using mock historical data for ${code}, ${timeframe}`);
-    return getMockOilData(code, timeframe);
-
-    /* Original API call - disabled to ensure charts always have data
-    const apiKey = env.OILPRICE_API_KEY;
+    const apiKey = env.MASSIVE_API_KEY;
 
     if (!apiKey) {
-        console.warn('[Oil Price] No API key configured, using mock data');
-        return getMockOilData(code, timeframe);
+        throw new Error('MASSIVE_API_KEY not configured');
     }
 
+    // Add date to cache key for daily invalidation
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const cache = env.MARKETMIND_CACHE ? new KVCache(env.MARKETMIND_CACHE) : null;
+    const cacheKey = `massive:oil:${code}:${timeframe}:${today}`;
+
+    // 1. Check KV cache first (fresh data)
+    if (cache) {
+        const cached = await cache.get<PricePoint[]>(cacheKey);
+        if (cached && !cached.isStale) {
+            console.log(`[Massive/Oil] Cache hit (fresh) for ${code} ${timeframe}`);
+            return cached.data;
+        }
+    }
+
+    // 2. Call Massive API
     try {
-        // Select the appropriate endpoint based on timeframe
-        const endpoint = getEndpointForTimeframe(timeframe);
-        const url = `https://api.oilpriceapi.com/v1${endpoint}?by_code=${code}`;
+        const data = await fetchMassiveCandles(code, timeframe, apiKey);
 
-        console.log(`[OilPrice] Fetching ${code} for ${timeframe} from ${endpoint}`);
-
-        const response = await fetch(url, {
-            headers: {
-                'Authorization': `Token ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('[OilPrice] API error:', response.status, response.statusText, errorText);
-            throw new Error(`OilPriceAPI error: ${response.status} ${response.statusText}`);
+        if (cache) {
+            await cache.set(cacheKey, data, CANDLES_TTL);
         }
 
-        const data = await response.json();
-        console.log(`[OilPrice] Raw API response:`, JSON.stringify(data).substring(0, 500));
-
-        // Normalize response to PricePoint format
-        const normalizedData = normalizeOilPriceData(data, code, timeframe);
-        console.log(`[OilPrice] Normalized ${normalizedData.length} data points`);
-
-        return normalizedData;
+        console.log(`[Massive/Oil] API success for ${code} ${timeframe} - ${data.length} candles`);
+        return data;
     } catch (error) {
-        console.error('[OilPrice] Error fetching data:', error);
-        console.warn('[OilPrice] Falling back to mock data');
-        // Fallback to mock data
-        return getMockOilData(code, timeframe);
-    }
-    */
-}
-
-function getEndpointForTimeframe(timeframe: Timeframe): string {
-    switch (timeframe) {
-        case '1D':
-            return '/prices/past_day';
-        case '1W':
-            return '/prices/past_week';
-        case '1M':
-            return '/prices/past_month';
-        default:
-            return '/prices/latest';
+        // 3. Stale cache fallback
+        if (cache) {
+            const staleData = await cache.getStale<PricePoint[]>(cacheKey);
+            if (staleData) {
+                console.warn(`[Massive/Oil] Using stale cache for ${code} ${timeframe}`);
+                return staleData;
+            }
+        }
+        throw error;
     }
 }
 
-function normalizeOilPriceData(apiData: any, code: string, timeframe: Timeframe): PricePoint[] {
-    console.log(`[OilPrice] Normalizing data for ${code}, timeframe: ${timeframe}`);
+export async function getOilQuote(
+    code: string,
+    env: Env
+): Promise<{ price: number; change: number; changePercent: number }> {
+    // Get latest candle from 7D data
+    try {
+        const data = await getOilPrice(code, '1D', env);
+        const latestCandle = data[data.length - 1];
+        const previousCandle = data[data.length - 2];
 
-    // Check response structure
-    if (!apiData?.status || apiData.status !== 'success') {
-        console.warn('[OilPrice] API response not successful:', apiData);
-        return [];
+        const price = latestCandle.close;
+        const change = price - previousCandle.close;
+        const changePercent = (change / previousCandle.close) * 100;
+
+        return {
+            price: Number(price.toFixed(2)),
+            change: Number(change.toFixed(2)),
+            changePercent: Number(changePercent.toFixed(2)),
+        };
+    } catch (error) {
+        console.error(`[Massive/Oil] Failed to get quote for ${code}:`, error);
+        // Return zero values instead of mock data
+        return {
+            price: 0,
+            change: 0,
+            changePercent: 0,
+        };
     }
-
-    if (!apiData?.data) {
-        console.warn('[OilPrice] No data in API response');
-        return [];
-    }
-
-    // For historical endpoints, data structure is:
-    // { status: "success", data: { "WTI_USD": [{ price: 78.45, timestamp: "..." }, ...] } }
-    const codeData = apiData.data[code];
-
-    if (!codeData) {
-        console.warn(`[OilPrice] No data for code ${code} in response`);
-        console.log(`[OilPrice] Available codes:`, Object.keys(apiData.data));
-        return [];
-    }
-
-    // Historical endpoints return arrays
-    if (Array.isArray(codeData)) {
-        console.log(`[OilPrice] Processing ${codeData.length} historical data points`);
-        return codeData.map((point: any) => ({
-            timestamp: point.timestamp || new Date().toISOString(),
-            close: point.price || 0,
-            // OilPrice API doesn't provide OHLC, only price
-        }));
-    }
-
-    // Latest endpoint returns single object
-    if (typeof codeData === 'object' && codeData.price) {
-        console.log('[OilPrice] Processing single latest price point');
-        return [{
-            timestamp: codeData.timestamp || new Date().toISOString(),
-            close: codeData.price,
-        }];
-    }
-
-    console.warn('[OilPrice] Unexpected data format:', typeof codeData);
-    return [];
-}
-
-import { MOCK_PRICES } from '../core/constants';
-import { seededRandom, generateSeed } from '../core/random';
-
-function getMockOilData(code: string, timeframe: Timeframe): PricePoint[] {
-    console.log(`[OilPrice] Generating ${timeframe} mock data for ${code}`);
-
-    const targetPrice = MOCK_PRICES[code] || 75.5;
-    const points = timeframe === '1D' ? 78 : timeframe === '1W' ? 168 : 30;
-    const interval = timeframe === '1D' ? 5 * 60 * 1000 : timeframe === '1W' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-
-    const now = Date.now();
-    const timeBlock = Math.floor(now / (1000 * 60 * 60));
-    const seed = generateSeed(code + timeframe, timeBlock);
-    const rng = seededRandom(seed);
-
-    const data: PricePoint[] = [];
-
-    let currentPrice = targetPrice;
-    const tempPoints: { close: number; open: number; high: number; low: number; volume: number }[] = [];
-
-    for (let i = 0; i < points; i++) {
-        const volatility = (rng() - 0.5) * (targetPrice * 0.02);
-        const trend = (targetPrice * 0.0005);
-
-        const prevPrice = currentPrice - volatility - trend;
-
-        tempPoints.unshift({
-            close: currentPrice,
-            open: prevPrice,
-            high: Math.max(prevPrice, currentPrice) + rng() * 0.5,
-            low: Math.min(prevPrice, currentPrice) - rng() * 0.5,
-            volume: Math.floor(rng() * 1000000) + 500000,
-        });
-
-        currentPrice = prevPrice;
-    }
-
-    for (let i = 0; i < points; i++) {
-        const timestamp = new Date(now - (points - i - 1) * interval).toISOString();
-        const p = tempPoints[i];
-
-        data.push({
-            timestamp,
-            close: Number(p.close.toFixed(2)),
-            open: Number(p.open.toFixed(2)),
-            high: Number(p.high.toFixed(2)),
-            low: Number(p.low.toFixed(2)),
-            volume: p.volume,
-        });
-    }
-
-    return data;
 }
