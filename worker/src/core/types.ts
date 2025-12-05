@@ -33,7 +33,6 @@ export interface Env {
     MASSIVE_API_KEY?: string;
     MARKETMIND_CACHE?: KVNamespace;
     MARKETAUX_API_TOKEN?: string;
-    OILPRICE_API_KEY?: string;
     GOLD_API_KEY?: string;
     GEMINI_API_KEY?: string;
     WORKER_ENV?: string;

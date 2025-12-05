@@ -1,4 +1,4 @@
-import type { OilCode, MetalSymbol, StockSymbol, Timeframe } from '../services/types';
+import type { CryptoSymbol, MetalSymbol, StockSymbol, Timeframe } from '../services/types';
 
 // ===========================
 // Supported Assets Configuration
@@ -14,9 +14,15 @@ export const STOCK_SYMBOLS: StockSymbol[] = [
     'META',  // Meta
 ];
 
-export const OIL_CODES: OilCode[] = [
-    'WTI_USD',   // West Texas Intermediate
-    'BRENT_USD', // Brent Crude
+export const CRYPTO_SYMBOLS: CryptoSymbol[] = [
+    'BTC',   // Bitcoin
+    'ETH',   // Ethereum
+    'SOL',   // Solana
+    'BNB',   // Binance Coin
+    'XRP',   // Ripple
+    'ADA',   // Cardano
+    'DOGE',  // Dogecoin
+    'MATIC', // Polygon
 ];
 
 export const METAL_SYMBOLS: MetalSymbol[] = [
@@ -53,7 +59,7 @@ export const TIMEFRAME_RESOLUTIONS: Record<Timeframe, string> = {
 // ===========================
 
 export const DEFAULT_STOCK: StockSymbol = 'AAPL';
-export const DEFAULT_OIL: OilCode = 'WTI_USD';
+export const DEFAULT_CRYPTO: CryptoSymbol = 'BTC';
 export const DEFAULT_METAL: MetalSymbol = 'XAU';
 
 // ===========================
@@ -70,9 +76,15 @@ export const ASSET_DISPLAY_NAMES: Record<string, string> = {
     AMZN: 'Amazon.com Inc.',
     META: 'Meta Platforms Inc.',
 
-    // Oil
-    WTI_USD: 'WTI Crude Oil',
-    BRENT_USD: 'Brent Crude Oil',
+    // Crypto
+    BTC: 'Bitcoin',
+    ETH: 'Ethereum',
+    SOL: 'Solana',
+    BNB: 'Binance Coin',
+    XRP: 'Ripple',
+    ADA: 'Cardano',
+    DOGE: 'Dogecoin',
+    MATIC: 'Polygon',
 
     // Metals
     XAU: 'Gold',

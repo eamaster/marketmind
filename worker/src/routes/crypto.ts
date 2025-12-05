@@ -1,24 +1,30 @@
-import type { Env, AssetDataResponse } from '../core/types';
-import { getOilPrice } from '../integrations/oilprice';
+// worker/src/routes/crypto.ts
+import type { Env } from '../core/types';
+import { getMassiveCryptoCandles } from '../integrations/massive';
+import type { Timeframe } from '../core/types';
 
-export async function handleOilRequest(
+export async function handleCryptoRequest(
     request: Request,
     env: Env,
     corsHeaders: Record<string, string>
 ): Promise<Response> {
     const url = new URL(request.url);
-    const code = url.searchParams.get('code') || 'WTI_USD';
-    const timeframe = (url.searchParams.get('timeframe') || '1D') as '1D' | '1W' | '1M';
+    const symbol = url.searchParams.get('symbol') || 'BTC';
+    const timeframe = (url.searchParams.get('timeframe') || '1D') as Timeframe;
+
+    console.log(`[Crypto Route] Request: ${symbol} ${timeframe}`);
 
     try {
-        const data = await getOilPrice(code, timeframe, env);
+        const data = await getMassiveCryptoCandles(symbol, timeframe, env);
 
-        const response: AssetDataResponse = {
+        const response = {
             data,
             metadata: {
-                symbol: code,
+                symbol,
                 timeframe,
-                assetType: 'oil',
+                assetType: 'crypto' as const,
+                source: 'massive.com',
+                count: data.length,
             },
         };
 
@@ -29,9 +35,11 @@ export async function handleOilRequest(
             },
         });
     } catch (error) {
+        console.error('[Crypto Route] ERROR:', error);
+
         return new Response(
             JSON.stringify({
-                error: 'Failed to fetch oil data',
+                error: 'Failed to fetch crypto data',
                 message: error instanceof Error ? error.message : 'Unknown error',
             }),
             {

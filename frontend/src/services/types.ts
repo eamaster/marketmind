@@ -61,10 +61,10 @@ export interface AiAnalyzeResponse {
 // Enums and Union Types
 // ===========================
 
-export type AssetType = 'stock' | 'oil' | 'metal';
+export type AssetType = 'stock' | 'crypto' | 'metal';
 export type Timeframe = '1D' | '1W' | '1M' | '3M' | '1Y';
 
-export type OilCode = 'WTI_USD' | 'BRENT_USD';
+export type CryptoSymbol = 'BTC' | 'ETH' | 'SOL' | 'BNB' | 'XRP' | 'AD A' | 'DOGE' | 'MATIC';
 export type MetalSymbol = 'XAU' | 'XAG';
 export type StockSymbol = string; // e.g., 'AAPL', 'TSLA', etc.
 

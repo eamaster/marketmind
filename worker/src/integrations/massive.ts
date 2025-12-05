@@ -201,3 +201,100 @@ export async function testMassiveCandles(env: Env): Promise<any> {
         };
     }
 }
+
+// ============================================================================
+// CRYPTO SUPPORT
+// ============================================================================
+
+// Convert crypto symbols to Massive format
+function convertCryptoSymbol(symbol: string): string {
+    const symbolMap: Record<string, string> = {
+        'BTC': 'X:BTCUSD',
+        'ETH': 'X:ETHUSD',
+        'SOL': 'X:SOLUSD',
+        'BNB': 'X:BNBUSD',
+        'XRP': 'X:XRPUSD',
+        'ADA': 'X:ADAUSD',
+        'DOGE': 'X:DOGEUSD',
+        'MATIC': 'X:MATICUSD',
+    };
+
+    return symbolMap[symbol] || `X:${symbol}USD`;
+}
+
+// Get crypto candles (reuses existing logic)
+export async function getMassiveCryptoCandles(
+    symbol: string,
+    timeframe: Timeframe,
+    env: Env
+): Promise<PricePoint[]> {
+    const apiKey = env.MASSIVE_API_KEY;
+
+    if (!apiKey) {
+        throw new Error('MASSIVE_API_KEY not configured');
+    }
+
+    const cache = env.MARKETMIND_CACHE ? new KVCache(env.MARKETMIND_CACHE) : null;
+    const massiveSymbol = convertCryptoSymbol(symbol);
+    const today = new Date().toISOString().split('T')[0];
+    const cacheKey = `massive:crypto:${symbol}:${timeframe}:${today}`;
+
+    // Check cache
+    if (cache) {
+        const cached = await cache.get<PricePoint[]>(cacheKey);
+        if (cached && !cached.isStale) {
+            console.log(`[Massive/Crypto] Cache hit for ${symbol} ${timeframe}`);
+            return cached.data;
+        }
+    }
+
+    try {
+        const data = await fetchMassiveCandles(massiveSymbol, timeframe, apiKey);
+
+        if (cache) {
+            await cache.set(cacheKey, data, CANDLES_TTL);
+        }
+
+        console.log(`[Massive/Crypto] Success for ${symbol} ${timeframe} - ${data.length} candles`);
+        return data;
+    } catch (error) {
+        if (cache) {
+            const staleData = await cache.getStale<PricePoint[]>(cacheKey);
+            if (staleData) {
+                console.warn(`[Massive/Crypto] Using stale cache for ${symbol} ${timeframe}`);
+                return staleData;
+            }
+        }
+        throw error;
+    }
+}
+
+// Get crypto quote
+export async function getMassiveCryptoQuote(
+    symbol: string,
+    env: Env
+): Promise<{ price: number; change: number; changePercent: number }> {
+    try {
+        const data = await getMassiveCryptoCandles(symbol, '1D', env);
+
+        if (data.length < 2) {
+            throw new Error('Insufficient data for quote calculation');
+        }
+
+        const latestCandle = data[data.length - 1];
+        const previousCandle = data[data.length - 2];
+
+        const price = latestCandle.close;
+        const change = price - previousCandle.close;
+        const changePercent = (change / previousCandle.close) * 100;
+
+        return {
+            price: Number(price.toFixed(2)),
+            change: Number(change.toFixed(2)),
+            changePercent: Number(changePercent.toFixed(2)),
+        };
+    } catch (error) {
+        console.error(`[Massive/Crypto] Failed to get quote for ${symbol}:`, error);
+        return { price: 0, change: 0, changePercent: 0 };
+    }
+}

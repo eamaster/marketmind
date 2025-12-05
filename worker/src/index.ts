@@ -24,10 +24,10 @@ export default {
                 return jsonResponse({ status: 'ok', timestamp: new Date().toISOString() }, corsHeaders);
             }
 
-            // Oil prices endpoint
-            if (path === '/api/oil' && request.method === 'GET') {
-                const { handleOilRequest } = await import('./routes/oil');
-                return await handleOilRequest(request, env, corsHeaders);
+            // Crypto prices endpoint
+            if (path === '/api/crypto' && request.method === 'GET') {
+                const { handleCryptoRequest } = await import('./routes/crypto');
+                return await handleCryptoRequest(request, env, corsHeaders);
             }
 
             // Gold/metals prices endpoint
