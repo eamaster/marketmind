@@ -5,8 +5,8 @@ import { Watchlist } from './Watchlist';
 import { MarketOverview } from './MarketOverview';
 
 interface SidebarProps {
-    activeAsset: 'stock' | 'oil' | 'metal';
-    onAssetChange: (asset: 'stock' | 'oil' | 'metal') => void;
+    activeAsset: 'stock' | 'crypto' | 'metal';
+    onAssetChange: (asset: 'stock' | 'crypto' | 'metal') => void;
     onSymbolClick?: (symbol: string) => void;
     className?: string;
     isOpen?: boolean;
@@ -118,3 +118,4 @@ export function Sidebar({
         </>
     );
 }
+

@@ -16,7 +16,7 @@ import { TimeframeSelector } from '../shared/TimeframeSelector';
 import type { PricePoint, Timeframe } from '../../services/types';
 import { useTheme } from '../../hooks/useTheme';
 
-interface OilChartProps {
+interface CryptoChartProps {
     data: PricePoint[] | null;
     timeframe: Timeframe;
     code?: string;
@@ -31,10 +31,10 @@ interface OilChartProps {
     currentPrice?: number; // Optional override for header price
 }
 
-// Default oil codes
-const DEFAULT_OIL_CODES = [
-    { value: 'WTI_USD', label: 'WTI Crude Oil' },
-    { value: 'BRENT_USD', label: 'Brent Crude Oil' },
+// Default Crypto codes
+const DEFAULT_Crypto_CODES = [
+    { value: 'BTC_USD', label: 'BTC Crude Crypto' },
+    { value: 'ETH_USD', label: 'ETH Crude Crypto' },
 ];
 
 function formatVolume(volume: number): string {
@@ -89,11 +89,11 @@ function getSentimentData(sentiment: 'bullish' | 'bearish' | 'neutral') {
     return config[sentiment];
 }
 
-export function OilChart({
+export function CryptoChart({
     data,
     timeframe,
-    code = 'WTI_USD',
-    name = 'WTI Crude Oil',
+    code = 'BTC_USD',
+    name = 'BTC Crude Crypto',
     sentiment = 'bearish',
     isLoading = false,
     onTimeframeChange,
@@ -101,7 +101,7 @@ export function OilChart({
     availableCodes,
     onUseForAI,
     currentPrice: overridePrice,
-}: OilChartProps) {
+}: CryptoChartProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
@@ -163,7 +163,7 @@ export function OilChart({
         <div
             className="space-y-4"
             role="img"
-            aria-label={`Oil price chart for ${code}`}
+            aria-label={`Crypto price chart for ${code}`}
         >
             {/* HEADER SECTION */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -172,17 +172,17 @@ export function OilChart({
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">{code}</p>
                 </div>
 
-                {/* Oil Type + Timeframe Controls */}
+                {/* Crypto Type + Timeframe Controls */}
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    {/* Oil Type Selector */}
+                    {/* Crypto Type Selector */}
                     {onCodeChange && (
                         <select
                             value={code}
                             onChange={(e) => onCodeChange(e.target.value)}
                             className="px-3 py-2 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-200 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all w-full sm:w-auto min-h-[44px] sm:min-h-0"
-                            aria-label="Select oil type"
+                            aria-label="Select Crypto type"
                         >
-                            {(availableCodes || DEFAULT_OIL_CODES).map((opt) => (
+                            {(availableCodes || DEFAULT_Crypto_CODES).map((opt) => (
                                 <option key={opt.value} value={opt.value} className="bg-white dark:bg-slate-800">
                                     {opt.label}
                                 </option>
@@ -233,11 +233,11 @@ export function OilChart({
                 </div>
             </div>
 
-            {/* COMPOSED CHART AREA - RED THEME FOR OIL */}
+            {/* COMPOSED CHART AREA - RED THEME FOR Crypto */}
             <ResponsiveContainer width="100%" height={320}>
                 <ComposedChart data={chartData}>
                     <defs>
-                        <linearGradient id="oilGradient" x1="0" y1="0" x2="0" y2="1">
+                        <linearGradient id="CryptoGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
                             <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                         </linearGradient>
@@ -328,7 +328,7 @@ export function OilChart({
                         dataKey="close"
                         stroke="#f87171"
                         strokeWidth={2}
-                        fill="url(#oilGradient)"
+                        fill="url(#CryptoGradient)"
                         dot={false}
                     />
                 </ComposedChart>
@@ -400,3 +400,4 @@ export function OilChart({
         </div>
     );
 }
+

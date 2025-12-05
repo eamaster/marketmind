@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { StockChart } from '../components/charts/StockChart';
-import { OilChart } from '../components/charts/OilChart';
+import { CryptoChart } from '../components/charts/CryptoChart';
 import { GoldChart } from '../components/charts/GoldChart';
 import { GlassCard } from '../components/shared/GlassCard';
 import { ChartErrorBoundary } from '../components/shared/ChartErrorBoundary';
@@ -8,13 +8,13 @@ import { CacheTimestamp } from '../components/shared/CacheTimestamp';
 import { BottomPerformance } from '../components/layout/BottomPerformance';
 import { useAssetData } from '../hooks/useAssetData';
 import { useNews } from '../hooks/useNews';
-import type { Timeframe, StockSymbol, OilCode, MetalSymbol, PricePoint, NewsArticle } from '../services/types';
+import type { Timeframe, StockSymbol, CryptoSymbol, MetalSymbol, PricePoint, NewsArticle } from '../services/types';
 
 interface DashboardPageProps {
-    activeAsset?: 'stock' | 'oil' | 'metal';
+    activeAsset?: 'stock' | 'crypto' | 'metal';
     onUseForAI?: () => void;
     onContextUpdate?: (context: {
-        assetType: 'stock' | 'oil' | 'metal';
+        assetType: 'stock' | 'crypto' | 'metal';
         symbol: string;
         timeframe: Timeframe;
         chartData: PricePoint[];
@@ -34,17 +34,23 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
         'META': 'Meta Platforms Inc.',
     };
 
-    const oilNameMap: Record<OilCode, string> = {
-        'WTI_USD': 'WTI Crude Oil',
-        'BRENT_USD': 'Brent Crude Oil',
+        const cryptoNameMap: Record<CryptoSymbol, string> = {
+        'BTC': 'Bitcoin',
+        'ETH': 'Ethereum',
+        'SOL': 'Solana',
+        'BNB': 'Binance Coin',
+        'XRP': 'Ripple',
+        'ADA': 'Cardano',
+        'DOGE': 'Dogecoin',
+        'MATIC': 'Polygon',
     };
 
     // State for all three asset types
     const [stockSymbol, setStockSymbol] = useState<StockSymbol>('AAPL');
     const [stockTimeframe, setStockTimeframe] = useState<Timeframe>('1D');
 
-    const [oilCode, setOilCode] = useState<OilCode>('WTI_USD');
-    const [oilTimeframe, setOilTimeframe] = useState<Timeframe>('1D');
+    const [CryptoSymbol, setCryptoSymbol] = useState<CryptoSymbol>('BTC');
+    const [cryptoTimeframe, setcryptoTimeframe] = useState<Timeframe>('1D');
 
     const [metalSymbol, setMetalSymbol] = useState<MetalSymbol>('XAU');
     const [metalTimeframe, setMetalTimeframe] = useState<Timeframe>('1D');
@@ -55,10 +61,10 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
         symbol: stockSymbol,
         timeframe: stockTimeframe,
     });
-    const oilData = useAssetData({
-        assetType: 'oil',
-        symbol: oilCode,
-        timeframe: oilTimeframe,
+    const cryptoData = useAssetData({
+        assetType: 'crypto',
+        symbol: CryptoSymbol,
+        timeframe: cryptoTimeframe,
     });
     const metalData = useAssetData({
         assetType: 'metal',
@@ -72,10 +78,10 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
         symbol: stockSymbol,
         timeframe: stockTimeframe,
     });
-    const oilNews = useNews({
-        assetType: 'oil',
-        symbol: oilCode,
-        timeframe: oilTimeframe,
+    const cryptoNews = useNews({
+        assetType: 'crypto',
+        symbol: CryptoSymbol,
+        timeframe: cryptoTimeframe,
     });
     const metalNews = useNews({
         assetType: 'metal',
@@ -95,13 +101,13 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                 chartData: stockData.data || [],
                 news: stockNews.articles || [],
             });
-        } else if (activeAsset === 'oil') {
+        } else if (activeAsset === 'crypto') {
             onContextUpdate({
-                assetType: 'oil',
-                symbol: oilCode,
-                timeframe: oilTimeframe,
-                chartData: oilData.data || [],
-                news: oilNews.articles || [],
+                assetType: 'crypto',
+                symbol: CryptoSymbol,
+                timeframe: cryptoTimeframe,
+                chartData: cryptoData.data || [],
+                news: cryptoNews.articles || [],
             });
         } else if (activeAsset === 'metal') {
             onContextUpdate({
@@ -117,14 +123,14 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
         onContextUpdate,
         // Stock deps
         stockSymbol, stockTimeframe, stockData.data, stockNews.articles,
-        // Oil deps
-        oilCode, oilTimeframe, oilData.data, oilNews.articles,
+        // crypto deps
+        CryptoSymbol, cryptoTimeframe, cryptoData.data, cryptoNews.articles,
         // Metal deps
         metalSymbol, metalTimeframe, metalData.data, metalNews.articles
     ]);
 
     const activeError = activeAsset === 'stock' ? stockData.error
-        : activeAsset === 'oil' ? oilData.error
+        : activeAsset === 'crypto' ? cryptoData.error
             : metalData.error;
 
     return (
@@ -175,20 +181,20 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                     </div>
                 )}
 
-                {activeAsset === 'oil' && (
-                    <div role="region" aria-labelledby="chart-title-oil">
+                {activeAsset === 'crypto' && (
+                    <div role="region" aria-labelledby="chart-title-crypto">
                         <ChartErrorBoundary>
                             <GlassCard>
-                                <OilChart
-                                    data={oilData.data}
-                                    timeframe={oilTimeframe}
-                                    code={oilCode}
-                                    name={oilNameMap[oilCode]}
-                                    sentiment={oilNews.sentiment?.label || 'bearish'}
-                                    isLoading={oilData.isLoading}
-                                    error={oilData.error}
-                                    onTimeframeChange={setOilTimeframe}
-                                    onCodeChange={(newCode) => setOilCode(newCode as any)}
+                                <CryptoChart
+                                    data={cryptoData.data}
+                                    timeframe={cryptoTimeframe}
+                                    code={CryptoSymbol}
+                                    name={cryptoNameMap[CryptoSymbol]}
+                                    sentiment={cryptoNews.sentiment?.label || 'bearish'}
+                                    isLoading={cryptoData.isLoading}
+                                    error={cryptoData.error}
+                                    onTimeframeChange={setcryptoTimeframe}
+                                    onCodeChange={(newCode) => setCryptoSymbol(newCode as any)}
                                     onUseForAI={onUseForAI}
                                 />
                                 <div className="mt-3 pt-3 border-t border-slate-700">
@@ -239,3 +245,5 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
         </div>
     );
 }
+
+

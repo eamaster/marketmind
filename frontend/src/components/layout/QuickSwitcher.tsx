@@ -1,11 +1,11 @@
 interface QuickSwitcherProps {
-    activeAsset: 'stock' | 'oil' | 'metal';
-    onAssetChange: (asset: 'stock' | 'oil' | 'metal') => void;
+    activeAsset: 'stock' | 'crypto' | 'metal';
+    onAssetChange: (asset: 'stock' | 'crypto' | 'metal') => void;
 }
 
 const ASSET_OPTIONS = [
     { id: 'stock' as const, label: 'Stocks', emoji: '📈' },
-    { id: 'oil' as const, label: 'Oil', emoji: '🛢️' },
+    { id: 'crypto' as const, label: 'Crypto', emoji: '₿' },
     { id: 'metal' as const, label: 'Precious Metals', emoji: '💰' },
 ];
 

@@ -21,7 +21,7 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  const [activeAsset, setActiveAsset] = useState<'stock' | 'oil' | 'metal'>('stock');
+  const [activeAsset, setActiveAsset] = useState<'stock' | 'crypto' | 'metal'>('stock');
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Fetch news for news ticker
@@ -29,7 +29,7 @@ function AppContent() {
 
   // AI Context State
   const [aiContext, setAiContext] = useState<{
-    assetType: 'stock' | 'oil' | 'metal';
+    assetType: 'stock' | 'crypto' | 'metal';
     symbol: string;
     timeframe: Timeframe;
     chartData: any[];

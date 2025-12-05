@@ -1,5 +1,5 @@
 // Thin fetch wrapper for calling Worker API endpoints
-import type { Timeframe } from './types';
+import type { Timeframe, PricePoint, NewsArticle } from './types';
 
 // In development: use Vite proxy (/api -> localhost:8787)
 // In production (GitHub Pages): use deployed Cloudflare Worker
@@ -67,9 +67,9 @@ async function fetchApi<T>(
 
 // API client methods
 export const apiClient = {
-    // Fetch asset data (stocks, oil, or metals)
+    // Fetch asset data (stocks, crypto, or metals)
     getAssetData: (params: {
-        assetType: 'stock' | 'oil' | 'metal';
+        assetType: 'stock' | 'crypto' | 'metal';
         symbol: string;
         timeframe: Timeframe;
     }) => {
@@ -77,8 +77,8 @@ export const apiClient = {
         const endpoint =
             assetType === 'stock'
                 ? `/stocks?symbol=${symbol}&timeframe=${timeframe}`
-                : assetType === 'oil'
-                    ? `/oil?code=${symbol}&timeframe=${timeframe}`
+                : assetType === 'crypto'
+                    ? `/crypto?symbol=${symbol}&timeframe=${timeframe}`
                     : `/gold?symbol=${symbol}&timeframe=${timeframe}`;
         return fetchApi<any>(endpoint);
     },
@@ -90,7 +90,7 @@ export const apiClient = {
 
     // Fetch news and sentiment
     getNews: (params: {
-        assetType: 'stock' | 'oil' | 'metal';
+        assetType: 'stock' | 'crypto' | 'metal';
         symbol?: string;
         timeframe: Timeframe;
     }) => {
@@ -103,18 +103,18 @@ export const apiClient = {
         return fetchApi<any>(`/news?${query}`);
     },
 
-    // Send AI analysis request
-    analyzeWithAi: (data: {
-        assetType: 'stock' | 'oil' | 'metal';
+    // Send analysis request to AI
+    analyzeWithAi: (params: {
+        assetType: 'stock' | 'crypto' | 'metal';
         symbol?: string;
         timeframe: Timeframe;
-        chartData: any[];
-        news: any[];
+        chartData: PricePoint[];
+        news: NewsArticle[];
         question: string;
     }) => {
         return fetchApi<{ answer: string }>('/ai/analyze', {
             method: 'POST',
-            body: JSON.stringify(data),
+            body: JSON.stringify(params),
         });
     },
 
