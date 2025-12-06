@@ -1,13 +1,9 @@
 // worker/src/integrations/goldApi.ts
-// Real Gold-API.com integration (NOT Massive.com)
+// Gold-API.com integration with proper gram-to-ounce conversion
 import type { Env, PricePoint, Timeframe } from '../core/types';
 import { KVCache } from '../core/cache';
 
-// Gold-API.com: 10 history API requests/hour FREE
-// Docs: https://www.gold-api.com/docs
-// Strategy: 1 hour cache + sample dates to conserve quota
-
-const GOLDAPI_CACHE_TTL = 3600; // 1 HOUR (critical for staying within 10 requests/hour)
+const GOLDAPI_CACHE_TTL = 3600; // 1 hour
 
 export async function getGoldPrice(
     symbol: string,
@@ -23,7 +19,7 @@ export async function getGoldPrice(
     const cache = env.MARKETMIND_CACHE ? new KVCache(env.MARKETMIND_CACHE) : null;
     const cacheKey = `goldapi:${symbol}:${timeframe}`;
 
-    // Check cache FIRST (critical to conserve 10 requests/hour)
+    // Check cache first
     if (cache) {
         const cached = await cache.get<PricePoint[]>(cacheKey);
         if (cached && !cached.isStale) {
@@ -42,7 +38,6 @@ export async function getGoldPrice(
         console.log(`[Gold-API] Success for ${symbol} ${timeframe} - ${data.length} candles`);
         return data;
     } catch (error) {
-        // Fallback to stale cache
         if (cache) {
             const staleData = await cache.getStale<PricePoint[]>(cacheKey);
             if (staleData) {
@@ -63,24 +58,23 @@ async function fetchGoldApiHistory(
 
     console.log(`[Gold-API] Fetching ${symbol} from ${startDate} to ${endDate} (${totalDays} days)`);
 
-    // Strategy: Sample dates intelligently to stay within 10 requests/hour
-    // With 1-hour cache, we can use up to 8 API calls per chart load
+    // Sample 8 dates to stay within quota
     const dates = sampleDates(startDate, endDate, totalDays, 8);
     const candles: PricePoint[] = [];
 
-    console.log(`[Gold-API] Sampling ${dates.length} dates to conserve quota`);
+    console.log(`[Gold-API] Sampling ${dates.length} dates`);
 
     for (const date of dates) {
         try {
-            // Gold-API format: GET https://api.gold-api.com/history/{api_key}/{symbol}/{date}
-            // Date format: YYYYMMDD
-            const formattedDate = date.replace(/-/g, ''); // "2025-12-05" → "20251205"
+            const formattedDate = date.replace(/-/g, '');
             const url = `https://api.gold-api.com/history/${apiKey}/${symbol}/${formattedDate}`;
+
+            console.log(`[Gold-API] Fetching ${symbol} for ${date}`);
 
             const response = await fetch(url);
 
             if (!response.ok) {
-                console.warn(`[Gold-API] Failed for ${symbol} on ${date}: ${response.status}`);
+                console.warn(`[Gold-API] HTTP ${response.status} for ${date}`);
                 continue;
             }
 
@@ -88,15 +82,46 @@ async function fetchGoldApiHistory(
                 timestamp?: number;
                 metal: string;
                 currency: string;
-                price: number; // USD per troy ounce
+                price: number;
+                price_gram_24k: number;
             };
 
-            if (!data.price || data.price === 0) {
-                console.warn(`[Gold-API] No price for ${symbol} on ${date}`);
+            console.log(`[Gold-API] Response for ${date}:`, JSON.stringify(data));
+
+            // CRITICAL FIX: Gold-API returns price per GRAM
+            // We need to convert to price per TROY OUNCE
+            let pricePerOz: number;
+
+            if (data.price && data.price > 0) {
+                // If 'price' exists and is reasonable (>$1000 for gold, >$10 for silver)
+                if (symbol === 'XAU' && data.price > 1000) {
+                    pricePerOz = data.price; // Already per ounce
+                } else if (symbol === 'XAG' && data.price > 10) {
+                    pricePerOz = data.price; // Already per ounce
+                } else if (data.price_gram_24k && data.price_gram_24k > 0) {
+                    // Convert from gram to troy ounce (1 troy oz = 31.1035 grams)
+                    pricePerOz = data.price_gram_24k * 31.1035;
+                } else {
+                    // Fallback: assume 'price' is per gram
+                    pricePerOz = data.price * 31.1035;
+                }
+            } else if (data.price_gram_24k && data.price_gram_24k > 0) {
+                // Use price_gram_24k and convert
+                pricePerOz = data.price_gram_24k * 31.1035;
+            } else {
+                console.warn(`[Gold-API] No valid price for ${symbol} on ${date}`);
                 continue;
             }
 
-            const pricePerOz = data.price;
+            // Sanity check: Gold should be $1000-$5000, Silver $10-$100
+            if (symbol === 'XAU' && (pricePerOz < 1000 || pricePerOz > 10000)) {
+                console.warn(`[Gold-API] Price out of range for gold: $${pricePerOz}`);
+                continue;
+            }
+            if (symbol === 'XAG' && (pricePerOz < 10 || pricePerOz > 200)) {
+                console.warn(`[Gold-API] Price out of range for silver: $${pricePerOz}`);
+                continue;
+            }
 
             candles.push({
                 timestamp: new Date(`${date}T00:00:00Z`).toISOString(),
@@ -109,11 +134,11 @@ async function fetchGoldApiHistory(
 
             console.log(`[Gold-API] ${symbol} ${date}: $${pricePerOz.toFixed(2)}`);
 
-            // Rate limit protection: 500ms delay between calls
+            // Rate limit: 500ms delay
             await new Promise(resolve => setTimeout(resolve, 500));
 
         } catch (error) {
-            console.error(`[Gold-API] Error fetching ${symbol} on ${date}:`, error);
+            console.error(`[Gold-API] Error for ${date}:`, error);
         }
     }
 
@@ -121,14 +146,8 @@ async function fetchGoldApiHistory(
         throw new Error(`No candles returned for ${symbol}`);
     }
 
-    // Log data freshness
     const lastCandle = candles[candles.length - 1];
-    const daysSinceLastCandle = Math.floor(
-        (Date.now() - new Date(lastCandle.timestamp).getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    console.log(`[Gold-API] ${symbol}: ${candles.length} candles, freshness: ${daysSinceLastCandle} days old`);
-    console.log(`[Gold-API] Latest price: $${lastCandle.close.toFixed(2)}`);
+    console.log(`[Gold-API] ${symbol}: ${candles.length} candles, Latest: $${lastCandle.close.toFixed(2)}`);
 
     return candles;
 }
@@ -139,11 +158,11 @@ function getDateRange(timeframe: Timeframe): { startDate: string; endDate: strin
 
     let daysBack = 7;
     switch (timeframe) {
-        case '1D': daysBack = 10; break;   // 7 trading days
-        case '1W': daysBack = 30; break;   // 1 month
-        case '1M': daysBack = 90; break;   // 3 months
-        case '3M': daysBack = 180; break;  // 6 months
-        case '1Y': daysBack = 365; break;  // 1 year
+        case '1D': daysBack = 10; break;
+        case '1W': daysBack = 30; break;
+        case '1M': daysBack = 90; break;
+        case '3M': daysBack = 180; break;
+        case '1Y': daysBack = 365; break;
     }
 
     const startDate = new Date(today);
@@ -157,7 +176,6 @@ function getDateRange(timeframe: Timeframe): { startDate: string; endDate: strin
 }
 
 function sampleDates(start: string, end: string, totalDays: number, maxSamples: number): string[] {
-    // Sample dates evenly across the range
     const interval = Math.ceil(totalDays / maxSamples);
     const dates: string[] = [];
     const current = new Date(start);
@@ -168,13 +186,12 @@ function sampleDates(start: string, end: string, totalDays: number, maxSamples: 
         current.setDate(current.getDate() + interval);
     }
 
-    // Always include the most recent date
     const endDateStr = end;
     if (dates[dates.length - 1] !== endDateStr) {
         dates.push(endDateStr);
     }
 
-    return dates.slice(0, maxSamples); // Cap at maxSamples
+    return dates.slice(0, maxSamples);
 }
 
 export async function getGoldQuote(

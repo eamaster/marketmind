@@ -208,6 +208,9 @@ export async function testMassiveCandles(env: Env): Promise<any> {
 
 // Convert crypto symbols to Massive format
 function convertCryptoSymbol(symbol: string): string {
+    // Remove any _USD suffix if frontend sends it
+    const cleanSymbol = symbol.replace('_USD', '').replace('_USDUSD', '');
+
     const symbolMap: Record<string, string> = {
         'BTC': 'X:BTCUSD',
         'ETH': 'X:ETHUSD',
@@ -219,7 +222,15 @@ function convertCryptoSymbol(symbol: string): string {
         'MATIC': 'X:MATICUSD',
     };
 
-    return symbolMap[symbol] || `X:${symbol}USD`;
+    const mapped = symbolMap[cleanSymbol];
+
+    if (!mapped) {
+        console.error(`[Massive/Crypto] Unknown symbol: ${symbol} (cleaned: ${cleanSymbol})`);
+        throw new Error(`Unsupported crypto symbol: ${symbol}`);
+    }
+
+    console.log(`[Massive/Crypto] Mapping ${symbol} → ${mapped}`);
+    return mapped;
 }
 
 // Get crypto candles (reuses existing logic)
@@ -235,9 +246,14 @@ export async function getMassiveCryptoCandles(
     }
 
     const cache = env.MARKETMIND_CACHE ? new KVCache(env.MARKETMIND_CACHE) : null;
+
+    // CRITICAL: Clean symbol before mapping
     const massiveSymbol = convertCryptoSymbol(symbol);
+
     const today = new Date().toISOString().split('T')[0];
     const cacheKey = `massive:crypto:${symbol}:${timeframe}:${today}`;
+
+    console.log(`[Massive/Crypto] Request for ${symbol} → ${massiveSymbol}, timeframe: ${timeframe}`);
 
     // Check cache
     if (cache) {
