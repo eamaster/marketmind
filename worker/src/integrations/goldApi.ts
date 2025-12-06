@@ -62,16 +62,18 @@ async function fetchGoldApiHistory(
     const dates = sampleDates(startDate, endDate, totalDays, 8);
     const candles: PricePoint[] = [];
 
-    console.log(`[Gold-API] Sampling ${dates.length} dates`);
+    console.log(`[Gold-API] Sampling ${dates.length} dates:`, dates);
 
     for (const date of dates) {
         try {
             const formattedDate = date.replace(/-/g, '');
             const url = `https://api.gold-api.com/history/${apiKey}/${symbol}/${formattedDate}`;
 
-            console.log(`[Gold-API] Fetching ${symbol} for ${date}`);
+            console.log(`[Gold-API] Request: ${url}`);
 
             const response = await fetch(url);
+
+            console.log(`[Gold-API] HTTP ${response.status} for ${symbol} on ${date}`);
 
             if (!response.ok) {
                 console.warn(`[Gold-API] HTTP ${response.status} for ${date}`);
@@ -86,7 +88,7 @@ async function fetchGoldApiHistory(
                 price_gram_24k: number;
             };
 
-            console.log(`[Gold-API] Response for ${date}:`, JSON.stringify(data));
+            console.log(`[Gold-API] Raw response for ${date}:`, JSON.stringify(data));
 
             // CRITICAL FIX: Gold-API returns price per GRAM
             // We need to convert to price per TROY OUNCE
@@ -109,16 +111,16 @@ async function fetchGoldApiHistory(
                 // Use price_gram_24k and convert
                 pricePerOz = data.price_gram_24k * 31.1035;
             } else {
-                console.warn(`[Gold-API] No valid price for ${symbol} on ${date}`);
+                console.warn(`[Gold-API] No valid price for ${symbol} on ${date}`, data);
                 continue;
             }
 
-            // Sanity check: Gold should be $1000-$5000, Silver $10-$100
-            if (symbol === 'XAU' && (pricePerOz < 1000 || pricePerOz > 10000)) {
+            // Sanity check: Gold should be $800-$15000, Silver $5-$500 (wider ranges to avoid false rejections)
+            if (symbol === 'XAU' && (pricePerOz < 800 || pricePerOz > 15000)) {
                 console.warn(`[Gold-API] Price out of range for gold: $${pricePerOz}`);
                 continue;
             }
-            if (symbol === 'XAG' && (pricePerOz < 10 || pricePerOz > 200)) {
+            if (symbol === 'XAG' && (pricePerOz < 5 || pricePerOz > 500)) {
                 console.warn(`[Gold-API] Price out of range for silver: $${pricePerOz}`);
                 continue;
             }
@@ -143,7 +145,7 @@ async function fetchGoldApiHistory(
     }
 
     if (candles.length === 0) {
-        throw new Error(`No candles returned for ${symbol}`);
+        throw new Error(`[Gold-API] No candles returned for ${symbol} (check logs for HTTP status and body)`);
     }
 
     const lastCandle = candles[candles.length - 1];
