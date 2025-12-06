@@ -128,29 +128,11 @@ export function GoldChart({
             ? (closePrice >= openPrice ? '#10b981' : '#ef4444')
             : (closePrice >= (data[index - 1].close || 0) ? '#10b981' : '#ef4444');
 
-        // Timeframe-aware date/time formatting
-        const date = new Date(point.timestamp);
-        let formattedTime: string;
-
-        if (timeframe === '1D') {
-            // Intraday: show time
-            formattedTime = date.toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-            });
-        } else if (timeframe === '1W' || timeframe === '1M') {
-            // Multi-day: show date (e.g., "Dec 6")
-            formattedTime = date.toLocaleDateString([], {
-                month: 'short',
-                day: 'numeric',
-            });
-        } else {
-            // Longer ranges: show date with year if needed
-            formattedTime = date.toLocaleDateString([], {
-                month: 'short',
-                day: 'numeric',
-            });
-        }
+        // ALL gold data is daily candles, so always show dates not times
+        const formattedTime = new Date(point.timestamp).toLocaleDateString([], {
+            month: 'short',
+            day: 'numeric',
+        });
 
         return {
             time: formattedTime,

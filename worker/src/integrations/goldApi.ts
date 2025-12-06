@@ -1,5 +1,5 @@
 // worker/src/integrations/goldApi.ts
-// Gold-API.com integration with proper gram-to-ounce conversion
+// Gold-API.com integration with CORRECT endpoint format
 import type { Env, PricePoint, Timeframe } from '../core/types';
 import { KVCache } from '../core/cache';
 
@@ -54,146 +54,99 @@ async function fetchGoldApiHistory(
     timeframe: Timeframe,
     apiKey: string
 ): Promise<PricePoint[]> {
-    const { startDate, endDate, totalDays } = getDateRange(timeframe);
+    const { startTimestamp, endTimestamp, daysBack } = getDateRange(timeframe);
 
-    console.log(`[Gold-API] Fetching ${symbol} from ${startDate} to ${endDate} (${totalDays} days)`);
+    console.log(`[Gold-API] Fetching ${symbol} from ${new Date(startTimestamp * 1000).toISOString()} to ${new Date(endTimestamp * 1000).toISOString()} (${daysBack} days)`);
 
-    // Sample 8 dates to stay within quota
-    const dates = sampleDates(startDate, endDate, totalDays, 8);
-    const candles: PricePoint[] = [];
+    // Build URL with query parameters - CORRECT FORMAT
+    const url = new URL('https://api.gold-api.com/history');
+    url.searchParams.set('symbol', symbol);
+    url.searchParams.set('startTimestamp', startTimestamp.toString());
+    url.searchParams.set('endTimestamp', endTimestamp.toString());
+    url.searchParams.set('groupBy', 'day'); // Daily aggregation
+    url.searchParams.set('aggregation', 'avg'); // Average price
+    url.searchParams.set('orderBy', 'asc'); // Oldest first
 
-    console.log(`[Gold-API] Sampling ${dates.length} dates:`, dates);
+    console.log(`[Gold-API] Request: ${url.toString()}`);
 
-    for (const date of dates) {
-        try {
-            const formattedDate = date.replace(/-/g, '');
-            const url = `https://api.gold-api.com/history/${apiKey}/${symbol}/${formattedDate}`;
+    try {
+        const response = await fetch(url.toString(), {
+            headers: {
+                'x-api-key': apiKey, // CORRECT: API key in header
+            },
+        });
 
-            console.log(`[Gold-API] Request: ${url}`);
+        console.log(`[Gold-API] HTTP ${response.status}`);
 
-            const response = await fetch(url);
-
-            console.log(`[Gold-API] HTTP ${response.status} for ${symbol} on ${date}`);
-
-            if (!response.ok) {
-                console.warn(`[Gold-API] HTTP ${response.status} for ${date}`);
-                continue;
-            }
-
-            const data = await response.json() as {
-                timestamp?: number;
-                metal: string;
-                currency: string;
-                price: number;
-                price_gram_24k: number;
-            };
-
-            console.log(`[Gold-API] Raw response for ${date}:`, JSON.stringify(data));
-
-            // CRITICAL FIX: Gold-API returns price per GRAM
-            // We need to convert to price per TROY OUNCE
-            let pricePerOz: number;
-
-            if (data.price && data.price > 0) {
-                // If 'price' exists and is reasonable (>$1000 for gold, >$10 for silver)
-                if (symbol === 'XAU' && data.price > 1000) {
-                    pricePerOz = data.price; // Already per ounce
-                } else if (symbol === 'XAG' && data.price > 10) {
-                    pricePerOz = data.price; // Already per ounce
-                } else if (data.price_gram_24k && data.price_gram_24k > 0) {
-                    // Convert from gram to troy ounce (1 troy oz = 31.1035 grams)
-                    pricePerOz = data.price_gram_24k * 31.1035;
-                } else {
-                    // Fallback: assume 'price' is per gram
-                    pricePerOz = data.price * 31.1035;
-                }
-            } else if (data.price_gram_24k && data.price_gram_24k > 0) {
-                // Use price_gram_24k and convert
-                pricePerOz = data.price_gram_24k * 31.1035;
-            } else {
-                console.warn(`[Gold-API] No valid price for ${symbol} on ${date}`, data);
-                continue;
-            }
-
-            // Sanity check: Gold should be $800-$15000, Silver $5-$500 (wider ranges to avoid false rejections)
-            if (symbol === 'XAU' && (pricePerOz < 800 || pricePerOz > 15000)) {
-                console.warn(`[Gold-API] Price out of range for gold: $${pricePerOz}`);
-                continue;
-            }
-            if (symbol === 'XAG' && (pricePerOz < 5 || pricePerOz > 500)) {
-                console.warn(`[Gold-API] Price out of range for silver: $${pricePerOz}`);
-                continue;
-            }
-
-            candles.push({
-                timestamp: new Date(`${date}T00:00:00Z`).toISOString(),
-                open: pricePerOz,
-                high: pricePerOz,
-                low: pricePerOz,
-                close: pricePerOz,
-                volume: 0,
-            });
-
-            console.log(`[Gold-API] ${symbol} ${date}: $${pricePerOz.toFixed(2)}`);
-
-            // Rate limit: 500ms delay
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-        } catch (error) {
-            console.error(`[Gold-API] Error for ${date}:`, error);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[Gold-API] Error response:`, errorText);
+            throw new Error(`Gold-API HTTP ${response.status}: ${errorText}`);
         }
+
+        const data = await response.json() as Array<{
+            day?: string;
+            avg_price?: number;
+            max_price?: number;
+            min_price?: number;
+        }>;
+
+        console.log(`[Gold-API] Received ${data.length} data points`);
+
+        if (!data || data.length === 0) {
+            throw new Error(`No data returned from Gold-API for ${symbol}`);
+        }
+
+        // Convert to PricePoint format
+        const candles: PricePoint[] = data.map(point => {
+            const price = Number(point.avg_price || point.max_price || point.min_price || 0);
+            const timestamp = point.day ? `${point.day}T00:00:00Z` : new Date().toISOString();
+
+            return {
+                timestamp,
+                open: price,
+                high: price,
+                low: price,
+                close: price,
+                volume: 0,
+            };
+        });
+
+        console.log(`[Gold-API] Converted to ${candles.length} candles`);
+        if (candles.length > 0) {
+            console.log(`[Gold-API] First: ${candles[0].timestamp} = $${candles[0].close.toFixed(2)}`);
+            console.log(`[Gold-API] Last: ${candles[candles.length - 1].timestamp} = $${candles[candles.length - 1].close.toFixed(2)}`);
+        }
+
+        return candles;
+    } catch (error) {
+        console.error(`[Gold-API] Fetch error:`, error);
+        throw error;
     }
-
-    if (candles.length === 0) {
-        throw new Error(`[Gold-API] No candles returned for ${symbol} (check logs for HTTP status and body)`);
-    }
-
-    const lastCandle = candles[candles.length - 1];
-    console.log(`[Gold-API] ${symbol}: ${candles.length} candles, Latest: $${lastCandle.close.toFixed(2)}`);
-
-    return candles;
 }
 
-function getDateRange(timeframe: Timeframe): { startDate: string; endDate: string; totalDays: number } {
-    const today = new Date();
-    const formatDate = (date: Date) => date.toISOString().split('T')[0];
+function getDateRange(timeframe: Timeframe): { startTimestamp: number; endTimestamp: number; daysBack: number } {
+    const now = new Date();
+    const endTimestamp = Math.floor(now.getTime() / 1000); // Current time in Unix timestamp
 
     let daysBack = 7;
     switch (timeframe) {
-        case '1D': daysBack = 10; break;
+        case '1D': daysBack = 7; break;
         case '1W': daysBack = 30; break;
         case '1M': daysBack = 90; break;
         case '3M': daysBack = 180; break;
         case '1Y': daysBack = 365; break;
     }
 
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - daysBack);
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - daysBack);
+    const startTimestamp = Math.floor(startDate.getTime() / 1000);
 
     return {
-        startDate: formatDate(startDate),
-        endDate: formatDate(today),
-        totalDays: daysBack,
+        startTimestamp,
+        endTimestamp,
+        daysBack,
     };
-}
-
-function sampleDates(start: string, end: string, totalDays: number, maxSamples: number): string[] {
-    const interval = Math.ceil(totalDays / maxSamples);
-    const dates: string[] = [];
-    const current = new Date(start);
-    const endDate = new Date(end);
-
-    while (current <= endDate) {
-        dates.push(current.toISOString().split('T')[0]);
-        current.setDate(current.getDate() + interval);
-    }
-
-    const endDateStr = end;
-    if (dates[dates.length - 1] !== endDateStr) {
-        dates.push(endDateStr);
-    }
-
-    return dates.slice(0, maxSamples);
 }
 
 export async function getGoldQuote(
