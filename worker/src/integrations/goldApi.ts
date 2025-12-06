@@ -100,7 +100,10 @@ async function fetchGoldApiHistory(
         // Convert to PricePoint format
         const candles: PricePoint[] = data.map(point => {
             const price = Number(point.avg_price || point.max_price || point.min_price || 0);
-            const timestamp = point.day ? `${point.day}T00:00:00Z` : new Date().toISOString();
+
+            // Gold API returns day as "2025-11-06 00:00:00" - extract date part only
+            const dateOnly = point.day ? point.day.split(' ')[0] : new Date().toISOString().split('T')[0];
+            const timestamp = `${dateOnly}T00:00:00Z`;
 
             return {
                 timestamp,
