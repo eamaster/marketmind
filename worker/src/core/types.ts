@@ -35,6 +35,7 @@ export interface Env {
     MARKETAUX_API_TOKEN?: string;
     GOLD_API_KEY?: string;
     GEMINI_API_KEY?: string;
+    COINGECKO_API_KEY?: string;
     WORKER_ENV?: string;
 }
 

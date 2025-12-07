@@ -1,6 +1,6 @@
 // worker/src/routes/crypto.ts
 import type { Env } from '../core/types';
-import { getBinanceCryptoCandles } from '../integrations/binance';
+import { getCoinGeckoCryptoCandles } from '../integrations/coingecko';
 import type { Timeframe } from '../core/types';
 
 export async function handleCryptoRequest(
@@ -12,10 +12,10 @@ export async function handleCryptoRequest(
     const symbol = url.searchParams.get('symbol') || 'BTC';
     const timeframe = (url.searchParams.get('timeframe') || '1D') as Timeframe;
 
-    console.log(`[Crypto Route] Request: ${symbol} ${timeframe} (Binance)`);
+    console.log(`[Crypto Route] Request (CoinGecko): ${symbol} ${timeframe}`);
 
     try {
-        const data = await getBinanceCryptoCandles(symbol, timeframe, env);
+        const data = await getCoinGeckoCryptoCandles(symbol, timeframe, env);
 
         const response = {
             data,
@@ -23,7 +23,7 @@ export async function handleCryptoRequest(
                 symbol,
                 timeframe,
                 assetType: 'crypto' as const,
-                source: 'binance-spot',
+                source: 'coingecko',
                 count: data.length,
             },
         };
@@ -35,11 +35,11 @@ export async function handleCryptoRequest(
             },
         });
     } catch (error) {
-        console.error('[Crypto Route] ERROR (Binance):', error);
+        console.error('[Crypto Route] ERROR (CoinGecko):', error);
 
         return new Response(
             JSON.stringify({
-                error: 'Failed to fetch crypto data from Binance',
+                error: 'Failed to fetch crypto data from CoinGecko',
                 message: error instanceof Error ? error.message : 'Unknown error',
             }),
             {

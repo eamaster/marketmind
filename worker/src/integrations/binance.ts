@@ -83,7 +83,12 @@ export async function getBinanceCryptoCandles(
     console.log(`[Binance/Crypto] Fetching ${symbol} (${pair}) timeframe=${timeframe}, limit=${limit}`);
 
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'MarketMind/1.0',
+                'Accept': 'application/json',
+            },
+        });
 
         if (!response.ok) {
             const errorText = await response.text();
