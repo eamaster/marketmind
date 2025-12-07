@@ -342,7 +342,7 @@ export function GoldChart({
                 <div className="flex items-center justify-between mb-1">
                     <span className="text-sm text-slate-500 dark:text-slate-400">
                         Sentiment:{' '}
-                        <span className={sentimentData.color}>
+                        <span className={sentimentData.textColor}>
                             {sentimentData.label} {sentimentData.emoji}
                         </span>
                     </span>
@@ -356,10 +356,7 @@ export function GoldChart({
                     aria-label="Market sentiment indicator"
                 >
                     <div
-                        className={`h-full transition-all duration-500 ${sentimentData.color.replace(
-                            'text-',
-                            'bg-'
-                        ).replace('dark:text-', 'dark:bg-')}`}
+                        className={`h-full transition-all duration-500 ${sentimentData.bgColor}`}
                         style={{ width: `${sentimentData.score * 100}%` }}
                     />
                 </div>

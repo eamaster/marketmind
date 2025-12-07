@@ -73,9 +73,9 @@ function calculateSupportResistance(data: PricePoint[]): { support: number; resi
 // Helper: Get sentiment data
 function getSentimentData(sentiment: 'bullish' | 'bearish' | 'neutral') {
     const config = {
-        bullish: { label: 'Bullish', emoji: '🐂', color: 'text-emerald-500 dark:text-emerald-400', score: 0.75 },
-        bearish: { label: 'Bearish', emoji: '🐻', color: 'text-red-500 dark:text-red-400', score: 0.25 },
-        neutral: { label: 'Neutral', emoji: '⚪', color: 'text-slate-500 dark:text-slate-400', score: 0.5 },
+        bullish: { label: 'Bullish', emoji: '🐂', textColor: 'text-emerald-500 dark:text-emerald-400', bgColor: 'bg-emerald-500 dark:bg-emerald-400', score: 0.75 },
+        bearish: { label: 'Bearish', emoji: '🐻', textColor: 'text-red-500 dark:text-red-400', bgColor: 'bg-red-500 dark:bg-red-400', score: 0.25 },
+        neutral: { label: 'Neutral', emoji: '⚪', textColor: 'text-slate-500 dark:text-slate-400', bgColor: 'bg-slate-500 dark:bg-slate-400', score: 0.5 },
     };
     return config[sentiment];
 }
@@ -386,7 +386,7 @@ export function StockChart({
                 <div className="flex items-center justify-between mb-1">
                     <span className="text-sm text-slate-500 dark:text-slate-400">
                         Sentiment:{' '}
-                        <span className={sentimentData.color}>
+                        <span className={sentimentData.textColor}>
                             {sentimentData.label} {sentimentData.emoji}
                         </span>
                     </span>
@@ -400,10 +400,7 @@ export function StockChart({
                     aria-label="Market sentiment indicator"
                 >
                     <div
-                        className={`h-full transition-all duration-500 ${sentimentData.color.replace(
-                            'text-',
-                            'bg-'
-                        ).replace('dark:text-', 'dark:bg-')}`}
+                        className={`h-full transition-all duration-500 ${sentimentData.bgColor}`}
                         style={{ width: `${sentimentData.score * 100}%` }}
                     />
                 </div>
