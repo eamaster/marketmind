@@ -361,7 +361,7 @@ export function CryptoChart({
                         className={`h-full transition-all duration-500 ${sentimentData.color.replace(
                             'text-',
                             'bg-'
-                        )}`}
+                        ).replace('dark:text-', 'dark:bg-')}`}
                         style={{ width: `${sentimentData.score * 100}%` }}
                     />
                 </div>
