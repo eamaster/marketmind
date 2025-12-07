@@ -1,6 +1,6 @@
 // worker/src/routes/crypto.ts
 import type { Env } from '../core/types';
-import { getMassiveCryptoCandles } from '../integrations/massive';
+import { getBinanceCryptoCandles } from '../integrations/binance';
 import type { Timeframe } from '../core/types';
 
 export async function handleCryptoRequest(
@@ -12,10 +12,10 @@ export async function handleCryptoRequest(
     const symbol = url.searchParams.get('symbol') || 'BTC';
     const timeframe = (url.searchParams.get('timeframe') || '1D') as Timeframe;
 
-    console.log(`[Crypto Route] Request: ${symbol} ${timeframe}`);
+    console.log(`[Crypto Route] Request: ${symbol} ${timeframe} (Binance)`);
 
     try {
-        const data = await getMassiveCryptoCandles(symbol, timeframe, env);
+        const data = await getBinanceCryptoCandles(symbol, timeframe, env);
 
         const response = {
             data,
@@ -23,7 +23,7 @@ export async function handleCryptoRequest(
                 symbol,
                 timeframe,
                 assetType: 'crypto' as const,
-                source: 'massive.com',
+                source: 'binance-spot',
                 count: data.length,
             },
         };
@@ -35,11 +35,11 @@ export async function handleCryptoRequest(
             },
         });
     } catch (error) {
-        console.error('[Crypto Route] ERROR:', error);
+        console.error('[Crypto Route] ERROR (Binance):', error);
 
         return new Response(
             JSON.stringify({
-                error: 'Failed to fetch crypto data',
+                error: 'Failed to fetch crypto data from Binance',
                 message: error instanceof Error ? error.message : 'Unknown error',
             }),
             {
