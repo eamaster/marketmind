@@ -1,10 +1,22 @@
+import {
+    Area,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ReferenceLine,
+    ResponsiveContainer,
+    ComposedChart,
+    Cell,
+} from 'recharts';
 import { TrendingUp, Star, Maximize2, Share2 } from 'lucide-react';
 import { PriceAnimated } from '../shared/PriceAnimated';
 import { TimeframeSelector } from '../shared/TimeframeSelector';
 import type { PricePoint, Timeframe } from '../../services/types';
+import { useTheme } from '../../hooks/useTheme';
 import { CRYPTO_SYMBOLS, ASSET_DISPLAY_NAMES } from '../../config/assets';
 import type { CryptoSymbol } from '../../services/types';
-import CandlestickChart, { type CandlePoint } from './CandlestickChart';
 
 interface CryptoChartProps {
     data: PricePoint[] | null;
@@ -34,7 +46,26 @@ function formatVolume(volume: number): string {
     return volume.toString();
 }
 
+function calculateSupportResistance(data: PricePoint[]): {
+    support: number;
+    resistance: number;
+} {
+    if (!data || data.length < 20) {
+        const currentPrice = data?.[data.length - 1]?.close || 0;
+        return {
+            support: currentPrice * 0.95,
+            resistance: currentPrice * 1.05,
+        };
+    }
 
+    const recentData = data.slice(-20);
+    const prices = recentData.map((d) => d.close);
+
+    return {
+        support: Math.min(...prices),
+        resistance: Math.max(...prices),
+    };
+}
 
 function getSentimentData(sentiment: 'bullish' | 'bearish' | 'neutral') {
     const config = {
@@ -73,7 +104,8 @@ export function CryptoChart({
     onUseForAI,
     currentPrice: overridePrice,
 }: CryptoChartProps) {
-    // Theme removed - CandlestickChart handles its own dark mode
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
 
     if (isLoading) {
         return (
@@ -91,6 +123,30 @@ export function CryptoChart({
         );
     }
 
+    const chartData = data.map((point, index) => {
+        const openPrice = point.open || 0;
+        const closePrice = point.close || 0;
+        const color = index === 0
+            ? (closePrice >= openPrice ? '#10b981' : '#ef4444')
+            : (closePrice >= (data[index - 1].close || 0) ? '#10b981' : '#ef4444');
+
+        // ALL crypto data is daily candles, so always show dates not times
+        const formattedTime = new Date(point.timestamp).toLocaleDateString([], {
+            month: 'short',
+            day: 'numeric',
+        });
+
+        return {
+            time: formattedTime,
+            close: closePrice,
+            open: openPrice,
+            high: point.high,
+            low: point.low,
+            volume: point.volume || 0,
+            color,
+        };
+    });
+
     const lastClose = data[data.length - 1]?.close || 0;
     const currentPrice = overridePrice || lastClose;
     const previousPrice = data[0]?.close || currentPrice;
@@ -104,6 +160,7 @@ export function CryptoChart({
         volume: data.reduce((sum, d) => sum + (d.volume || 0), 0),
     };
 
+    const { support, resistance } = calculateSupportResistance(data);
     const isBullish = priceChange >= 0;
     const sentimentData = getSentimentData(sentiment);
 
@@ -181,18 +238,106 @@ export function CryptoChart({
                 </div>
             </div>
 
-            {/* CANDLESTICK CHART */}
-            <CandlestickChart
-                data={data.map((p) => ({
-                    timestamp: p.timestamp,
-                    open: p.open ?? p.close,
-                    high: p.high ?? p.close,
-                    low: p.low ?? p.close,
-                    close: p.close,
-                })) as CandlePoint[]}
-                timeframe={timeframe}
-                height={320}
-            />
+            {/* COMPOSED CHART AREA - RED THEME FOR Crypto */}
+            <ResponsiveContainer width="100%" height={320}>
+                <ComposedChart data={chartData}>
+                    <defs>
+                        <linearGradient id="CryptoGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} opacity={0.3} />
+
+                    <XAxis
+                        dataKey="time"
+                        stroke={isDark ? "#64748b" : "#94a3b8"}
+                        tick={{ fontSize: 10, fill: isDark ? "#94a3b8" : "#64748b" }}
+                        tickLine={false}
+                        minTickGap={30}
+                    />
+
+                    {/* Price Y-Axis (Right) */}
+                    <YAxis
+                        yAxisId="price"
+                        orientation="right"
+                        stroke={isDark ? "#64748b" : "#94a3b8"}
+                        tick={{ fontSize: 10, fill: isDark ? "#94a3b8" : "#64748b" }}
+                        tickLine={false}
+                        domain={['auto', 'auto']}
+                        width={40}
+                    />
+
+                    {/* Volume Y-Axis (Left, hidden or scaled) */}
+                    <YAxis
+                        yAxisId="volume"
+                        orientation="left"
+                        hide={true}
+                        domain={[0, 'dataMax * 4']}
+                    />
+
+                    <ReferenceLine
+                        yAxisId="price"
+                        y={support}
+                        stroke="#f87171"
+                        strokeDasharray="5 5"
+                        label={{
+                            value: `Support: $${support.toFixed(2)}`,
+                            fontSize: 10,
+                            fill: '#f87171',
+                            position: 'insideBottomLeft',
+                        }}
+                    />
+                    <ReferenceLine
+                        yAxisId="price"
+                        y={resistance}
+                        stroke="#ef4444"
+                        strokeDasharray="5 5"
+                        label={{
+                            value: `Resistance: $${resistance.toFixed(2)}`,
+                            fontSize: 10,
+                            fill: '#ef4444',
+                            position: 'insideTopLeft',
+                        }}
+                    />
+
+                    <Tooltip
+                        contentStyle={{
+                            backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                            borderColor: isDark ? '#334155' : '#e2e8f0',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            color: isDark ? '#f1f5f9' : '#0f172a',
+                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                        }}
+                        labelStyle={{ color: isDark ? '#cbd5e1' : '#64748b' }}
+                        itemStyle={{ color: isDark ? '#cbd5e1' : '#334155' }}
+                    />
+
+                    {/* Volume Bars */}
+                    <Bar
+                        yAxisId="volume"
+                        dataKey="volume"
+                        barSize={4}
+                    >
+                        {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} opacity={0.3} />
+                        ))}
+                    </Bar>
+
+                    {/* Price Area */}
+                    <Area
+                        yAxisId="price"
+                        type="monotone"
+                        dataKey="close"
+                        stroke="#f87171"
+                        strokeWidth={2}
+                        fill="url(#CryptoGradient)"
+                        dot={false}
+                    />
+                </ComposedChart>
+            </ResponsiveContainer>
 
             {/* SENTIMENT GAUGE */}
             <div>
