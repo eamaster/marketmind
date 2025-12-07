@@ -70,19 +70,22 @@ function getSentimentData(sentiment: 'bullish' | 'bearish' | 'neutral') {
         bullish: {
             label: 'Bullish',
             emoji: '🐂',
-            color: 'text-amber-500 dark:text-amber-400',
+            textColor: 'text-amber-500 dark:text-amber-400',
+            bgColor: 'bg-amber-500 dark:bg-amber-400',
             score: 0.75,
         },
         bearish: {
             label: 'Bearish',
             emoji: '🐻',
-            color: 'text-red-500 dark:text-red-400',
+            textColor: 'text-red-500 dark:text-red-400',
+            bgColor: 'bg-red-500 dark:bg-red-400',
             score: 0.25,
         },
         neutral: {
             label: 'Neutral',
             emoji: '⚪',
-            color: 'text-amber-500 dark:text-amber-400',
+            textColor: 'text-amber-500 dark:text-amber-400',
+            bgColor: 'bg-amber-500 dark:bg-amber-400',
             score: 0.5,
         },
     };
