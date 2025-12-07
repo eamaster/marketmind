@@ -15,6 +15,8 @@ import { PriceAnimated } from '../shared/PriceAnimated';
 import { TimeframeSelector } from '../shared/TimeframeSelector';
 import type { PricePoint, Timeframe } from '../../services/types';
 import { useTheme } from '../../hooks/useTheme';
+import { CRYPTO_SYMBOLS, ASSET_DISPLAY_NAMES } from '../../config/assets';
+import type { CryptoSymbol } from '../../services/types';
 
 interface CryptoChartProps {
     data: PricePoint[] | null;
@@ -31,11 +33,11 @@ interface CryptoChartProps {
     currentPrice?: number; // Optional override for header price
 }
 
-// Default Crypto codes
-const DEFAULT_Crypto_CODES = [
-    { value: 'BTC', label: 'Bitcoin (BTC)' },
-    { value: 'ETH', label: 'Ethereum (ETH)' },
-];
+// Generate dropdown options from all CRYPTO_SYMBOLS in config
+const DEFAULT_Crypto_CODES = CRYPTO_SYMBOLS.map((sym: CryptoSymbol) => ({
+    value: sym,
+    label: `${ASSET_DISPLAY_NAMES[sym]} (${sym})`
+}));
 
 function formatVolume(volume: number): string {
     if (volume >= 1e9) return `${(volume / 1e9).toFixed(1)}B`;
