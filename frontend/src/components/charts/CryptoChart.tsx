@@ -33,8 +33,8 @@ interface CryptoChartProps {
 
 // Default Crypto codes
 const DEFAULT_Crypto_CODES = [
-    { value: 'BTC_USD', label: 'BTC Crude Crypto' },
-    { value: 'ETH_USD', label: 'ETH Crude Crypto' },
+    { value: 'BTC', label: 'Bitcoin (BTC)' },
+    { value: 'ETH', label: 'Ethereum (ETH)' },
 ];
 
 function formatVolume(volume: number): string {
@@ -92,8 +92,8 @@ function getSentimentData(sentiment: 'bullish' | 'bearish' | 'neutral') {
 export function CryptoChart({
     data,
     timeframe,
-    code = 'BTC_USD',
-    name = 'BTC Crude Crypto',
+    code = 'BTC',
+    name = 'Bitcoin',
     sentiment = 'bearish',
     isLoading = false,
     onTimeframeChange,

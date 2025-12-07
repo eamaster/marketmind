@@ -11,6 +11,28 @@ const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
 // Cache TTL: 2 minutes (safe vs 30 calls/min & 10k/month limits)
 const COINGECKO_CACHE_TTL = 120;
 
+/**
+ * Normalize crypto symbol to canonical form
+ * Handles legacy formats: ETH_USD, ETHUSDT, ETH/USD -> ETH
+ */
+function normalizeCryptoSymbol(symbol: string): string {
+    if (!symbol) return symbol;
+
+    // Uppercase for consistency
+    let s = symbol.toUpperCase().trim();
+
+    // Strip common quote suffixes
+    if (s.endsWith('_USD')) s = s.slice(0, -4);
+    if (s.endsWith('/USD')) s = s.slice(0, -4);
+    if (s.endsWith('USD')) s = s.slice(0, -3);
+    if (s.endsWith('USDT')) s = s.slice(0, -4);
+
+    // Remove any leftover separators
+    s = s.replace(/[^A-Z0-9]/g, '');
+
+    return s;
+}
+
 // Map our CryptoSymbol to CoinGecko coin ID (API identifier)
 // IDs from CoinGecko API documentation
 const COINGECKO_ID_MAP: Record<string, string> = {
@@ -143,8 +165,11 @@ export async function getCoinGeckoCryptoCandles(
     timeframe: Timeframe,
     env: Env
 ): Promise<PricePoint[]> {
-    const id = COINGECKO_ID_MAP[symbol];
+    const normalized = normalizeCryptoSymbol(symbol);
+    const id = COINGECKO_ID_MAP[normalized];
+
     if (!id) {
+        console.error(`[CoinGecko/Crypto] Unsupported crypto symbol: ${symbol} (normalized: ${normalized})`);
         throw new Error(`Unsupported crypto symbol for CoinGecko: ${symbol}`);
     }
 
