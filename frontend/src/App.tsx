@@ -25,9 +25,9 @@ function AppContent() {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Fetch news for news ticker
-  const stockNews = useNews({ assetType: 'stock', symbol: 'AAPL', timeframe: '1D' });
+  const stockNews = useNews({ assetType: 'stock', symbol: 'AAPL', timeframe: '7D' });
 
-  // AI Context State
+  // AI Context State - matches DashboardPage initial state
   const [aiContext, setAiContext] = useState<{
     assetType: 'stock' | 'crypto' | 'metal';
     symbol: string;
@@ -35,9 +35,9 @@ function AppContent() {
     chartData: any[];
     news: any[];
   }>({
-    assetType: 'stock',
-    symbol: 'AAPL',
-    timeframe: '1D',
+    assetType: activeAsset, // Dynamic based on active asset
+    symbol: activeAsset === 'stock' ? 'AAPL' : activeAsset === 'crypto' ? 'BTC' : 'XAU',
+    timeframe: '7D',
     chartData: [],
     news: [],
   });

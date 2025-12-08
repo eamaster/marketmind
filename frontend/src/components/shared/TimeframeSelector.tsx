@@ -5,18 +5,8 @@ interface TimeframeSelectorProps {
     onChange: (timeframe: Timeframe) => void;
 }
 
-// Mapping of internal timeframe values to user-friendly labels
-// Internal: '1D', '1W', '1M', '3M', '1Y' (for backend compatibility)
-// Display: '7D', '1M', '3M', '6M', '1Y' (what users actually see)
-const timeframeLabels: Record<Timeframe, string> = {
-    '1D': '7D',   // 7 trading days (1 week) - CHANGED FROM 5D
-    '1W': '1M',   // 1 month of daily data  
-    '1M': '3M',   // 3 months of daily data
-    '3M': '6M',   // 6 months of daily data
-    '1Y': '1Y',   // 1 year of daily data
-};
-
-const timeframes: Timeframe[] = ['1D', '1W', '1M', '3M', '1Y'];
+// Actual timeframe values that match UI display
+const timeframes: Timeframe[] = ['7D', '1M', '3M', '6M', '1Y'];
 
 export function TimeframeSelector({ value, onChange }: TimeframeSelectorProps) {
     return (
@@ -30,9 +20,9 @@ export function TimeframeSelector({ value, onChange }: TimeframeSelectorProps) {
                         : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                         }`}
                     aria-pressed={value === tf}
-                    title={`Show ${timeframeLabels[tf]} of daily candles`}
+                    title={`Show ${tf} of data`}
                 >
-                    {timeframeLabels[tf]}
+                    {tf}
                 </button>
             ))}
         </div>

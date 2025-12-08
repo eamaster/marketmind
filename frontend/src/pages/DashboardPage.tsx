@@ -47,13 +47,13 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
 
     // State for all three asset types
     const [stockSymbol, setStockSymbol] = useState<StockSymbol>('AAPL');
-    const [stockTimeframe, setStockTimeframe] = useState<Timeframe>('1D');
+    const [stockTimeframe, setStockTimeframe] = useState<Timeframe>('7D');
 
     const [CryptoSymbol, setCryptoSymbol] = useState<CryptoSymbol>('BTC');
-    const [cryptoTimeframe, setcryptoTimeframe] = useState<Timeframe>('1D');
+    const [cryptoTimeframe, setcryptoTimeframe] = useState<Timeframe>('7D');
 
     const [metalSymbol, setMetalSymbol] = useState<MetalSymbol>('XAU');
-    const [metalTimeframe, setMetalTimeframe] = useState<Timeframe>('1D');
+    const [metalTimeframe, setMetalTimeframe] = useState<Timeframe>('7D');
 
     // Fetch data only for active asset to save API calls
     const stockData = useAssetData({
@@ -129,6 +129,42 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
         metalSymbol, metalTimeframe, metalData.data, metalNews.articles
     ]);
 
+    // Handler for "Use for AI" button - forces immediate context update
+    const handleUseForAI = () => {
+        // Force context update with current state before opening AI chat
+        if (onContextUpdate) {
+            if (activeAsset === 'stock') {
+                onContextUpdate({
+                    assetType: 'stock',
+                    symbol: stockSymbol,
+                    timeframe: stockTimeframe,
+                    chartData: stockData.data || [],
+                    news: stockNews.articles || [],
+                });
+            } else if (activeAsset === 'crypto') {
+                onContextUpdate({
+                    assetType: 'crypto',
+                    symbol: CryptoSymbol,
+                    timeframe: cryptoTimeframe,
+                    chartData: cryptoData.data || [],
+                    news: cryptoNews.articles || [],
+                });
+            } else if (activeAsset === 'metal') {
+                onContextUpdate({
+                    assetType: 'metal',
+                    symbol: metalSymbol,
+                    timeframe: metalTimeframe,
+                    chartData: metalData.data || [],
+                    news: metalNews.articles || [],
+                });
+            }
+        }
+        // Then open the AI chat
+        if (onUseForAI) {
+            onUseForAI();
+        }
+    };
+
     const activeError = activeAsset === 'stock' ? stockData.error
         : activeAsset === 'crypto' ? cryptoData.error
             : metalData.error;
@@ -167,7 +203,7 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                                     error={stockData.error}
                                     onTimeframeChange={setStockTimeframe}
                                     onSymbolChange={(newSymbol) => setStockSymbol(newSymbol as any)}
-                                    onUseForAI={onUseForAI}
+                                    onUseForAI={handleUseForAI}
                                 />
                                 <div className="mt-3 pt-3 border-t border-slate-700">
                                     <CacheTimestamp
@@ -195,7 +231,7 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                                     error={cryptoData.error}
                                     onTimeframeChange={setcryptoTimeframe}
                                     onCodeChange={(newCode) => setCryptoSymbol(newCode as any)}
-                                    onUseForAI={onUseForAI}
+                                    onUseForAI={handleUseForAI}
                                     hasOhlc={cryptoData.metadata?.hasOhlc}
                                 />
                                 <div className="mt-3 pt-3 border-t border-slate-700">
@@ -224,7 +260,7 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                                     error={metalData.error}
                                     onTimeframeChange={setMetalTimeframe}
                                     onSymbolChange={(newSymbol) => setMetalSymbol(newSymbol as any)}
-                                    onUseForAI={onUseForAI}
+                                    onUseForAI={handleUseForAI}
                                 />
                                 <div className="mt-3 pt-3 border-t border-slate-700">
                                     <CacheTimestamp

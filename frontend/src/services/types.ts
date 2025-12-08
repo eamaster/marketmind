@@ -63,7 +63,7 @@ export interface AiAnalyzeResponse {
 // ===========================
 
 export type AssetType = 'stock' | 'crypto' | 'metal';
-export type Timeframe = '1D' | '1W' | '1M' | '3M' | '1Y';
+export type Timeframe = '7D' | '1M' | '3M' | '6M' | '1Y';
 
 export type CryptoSymbol = 'BTC' | 'ETH' | 'SOL' | 'BNB' | 'XRP' | 'ADA' | 'DOGE' | 'MATIC';
 export type MetalSymbol = 'XAU' | 'XAG';
