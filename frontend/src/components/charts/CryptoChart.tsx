@@ -248,11 +248,15 @@ export function CryptoChart({
                 </div>
             </div>
 
-            {/* COMPOSED CHART AREA - RED THEME FOR Crypto */}
+            {/* COMPOSED CHART AREA - DYNAMIC COLORS */}
             <ResponsiveContainer width="100%" height={320}>
                 <ComposedChart data={chartData}>
                     <defs>
-                        <linearGradient id="CryptoGradient" x1="0" y1="0" x2="0" y2="1">
+                        <linearGradient id="cryptoBullGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="cryptoBearGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
                             <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                         </linearGradient>
@@ -302,12 +306,12 @@ export function CryptoChart({
                     <ReferenceLine
                         yAxisId="price"
                         y={resistance}
-                        stroke="#ef4444"
+                        stroke="#34d399"
                         strokeDasharray="5 5"
                         label={{
                             value: `Resistance: $${resistance.toFixed(2)}`,
                             fontSize: 10,
-                            fill: '#ef4444',
+                            fill: '#34d399',
                             position: 'insideTopLeft',
                         }}
                     />
@@ -341,9 +345,9 @@ export function CryptoChart({
                         yAxisId="price"
                         type="monotone"
                         dataKey="close"
-                        stroke="#f87171"
+                        stroke={isBullish ? '#34d399' : '#f87171'}
                         strokeWidth={2}
-                        fill="url(#CryptoGradient)"
+                        fill={isBullish ? 'url(#cryptoBullGradient)' : 'url(#cryptoBearGradient)'}
                         dot={false}
                     />
                 </ComposedChart>

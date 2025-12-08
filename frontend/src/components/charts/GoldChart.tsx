@@ -239,13 +239,17 @@ export function GoldChart({
                 </div>
             </div>
 
-            {/* COMPOSED CHART AREA - GOLD/AMBER THEME */}
+            {/* COMPOSED CHART AREA - DYNAMIC COLORS */}
             <ResponsiveContainer width="100%" height={320}>
                 <ComposedChart data={chartData}>
                     <defs>
-                        <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                        <linearGradient id="metalBullGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="metalBearGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                         </linearGradient>
                     </defs>
 
@@ -281,24 +285,24 @@ export function GoldChart({
                     <ReferenceLine
                         yAxisId="price"
                         y={support}
-                        stroke="#fbbf24"
+                        stroke="#f87171"
                         strokeDasharray="5 5"
                         label={{
                             value: `Support: $${support.toFixed(2)}`,
                             fontSize: 10,
-                            fill: '#fbbf24',
+                            fill: '#f87171',
                             position: 'insideBottomLeft',
                         }}
                     />
                     <ReferenceLine
                         yAxisId="price"
                         y={resistance}
-                        stroke="#f59e0b"
+                        stroke="#34d399"
                         strokeDasharray="5 5"
                         label={{
                             value: `Resistance: $${resistance.toFixed(2)}`,
                             fontSize: 10,
-                            fill: '#f59e0b',
+                            fill: '#34d399',
                             position: 'insideTopLeft',
                         }}
                     />
@@ -332,9 +336,9 @@ export function GoldChart({
                         yAxisId="price"
                         type="monotone"
                         dataKey="close"
-                        stroke="#f59e0b"
+                        stroke={isBullish ? '#34d399' : '#f87171'}
                         strokeWidth={2}
-                        fill="url(#goldGradient)"
+                        fill={isBullish ? 'url(#metalBullGradient)' : 'url(#metalBearGradient)'}
                         dot={false}
                     />
                 </ComposedChart>
