@@ -25,7 +25,7 @@ export interface SentimentSummary {
 }
 
 export type AssetType = 'stock' | 'oil' | 'metal';
-export type Timeframe = '1D' | '1W' | '1M' | '3M' | '1Y';
+export type Timeframe = '7D' | '1M' | '3M' | '6M' | '1Y';
 
 // Environment bindings interface
 export interface Env {
@@ -59,6 +59,8 @@ export interface AssetDataResponse {
         symbol: string;
         timeframe: Timeframe;
         assetType: AssetType;
+        support?: number | null;
+        resistance?: number | null;
     };
 }
 

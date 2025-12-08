@@ -37,6 +37,8 @@ export interface AssetDataResponse {
         timeframe: Timeframe;
         assetType: AssetType;
         hasOhlc?: boolean; // For crypto: indicates if full OHLC data (true) or price-only fallback (false)
+        support?: number | null; // Support level computed from recent lows
+        resistance?: number | null; // Resistance level computed from recent highs
     };
 }
 

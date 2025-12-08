@@ -29,6 +29,8 @@ interface GoldChartProps {
     availableSymbols?: Array<{ value: string; label: string }>;
     onUseForAI?: () => void;
     currentPrice?: number; // Optional override for header price
+    supportLevel?: number | null; // Support level from worker (if available)
+    resistanceLevel?: number | null; // Resistance level from worker (if available)
 }
 
 // Default metal symbols
@@ -104,6 +106,8 @@ export function GoldChart({
     availableSymbols,
     onUseForAI,
     currentPrice: overridePrice,
+    supportLevel,
+    resistanceLevel,
 }: GoldChartProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -161,7 +165,10 @@ export function GoldChart({
         volume: data.reduce((sum, d) => sum + (d.volume || 0), 0),
     };
 
-    const { support, resistance } = calculateSupportResistance(data);
+    const { support: localSupport, resistance: localResistance } = calculateSupportResistance(data);
+    // Use worker-provided values if available, otherwise use local calculation
+    const support = supportLevel ?? localSupport;
+    const resistance = resistanceLevel ?? localResistance;
     const isBullish = priceChange >= 0;
     const sentimentData = getSentimentData(sentiment);
 

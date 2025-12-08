@@ -1,5 +1,6 @@
 import type { Env, AssetDataResponse } from '../core/types';
 import { getGoldPrice } from '../integrations/goldApi';
+import { computeSupportResistance } from '../utils/levels';
 
 export async function handleGoldRequest(
     request: Request,
@@ -13,12 +14,17 @@ export async function handleGoldRequest(
     try {
         const data = await getGoldPrice(symbol, timeframe, env);
 
+        // Compute support and resistance levels from candle data
+        const { support, resistance } = computeSupportResistance(data);
+
         const response: AssetDataResponse = {
             data,
             metadata: {
                 symbol,
                 timeframe,
                 assetType: 'metal',
+                support,
+                resistance,
             },
         };
 

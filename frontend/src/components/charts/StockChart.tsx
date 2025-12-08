@@ -30,6 +30,8 @@ interface StockChartProps {
     onUseForAI?: () => void;
     currentPrice?: number; // Optional override for header price
     isLive?: boolean; // Whether data includes today's live candle
+    supportLevel?: number | null; // Support level from worker (if available)
+    resistanceLevel?: number | null; // Resistance level from worker (if available)
 }
 
 // Default stock symbols
@@ -93,6 +95,8 @@ export function StockChart({
     onUseForAI,
     currentPrice: overridePrice,
     isLive = false,
+    supportLevel,
+    resistanceLevel,
 }: StockChartProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -173,7 +177,10 @@ export function StockChart({
         latestPrice,
     };
 
-    const { support, resistance } = calculateSupportResistance(data);
+    const { support: localSupport, resistance: localResistance } = calculateSupportResistance(data);
+    // Use worker-provided values if available, otherwise use local calculation
+    const support = supportLevel ?? localSupport;
+    const resistance = resistanceLevel ?? localResistance;
     const isBullish = priceChange >= 0;
     const sentimentData = getSentimentData(sentiment);
 

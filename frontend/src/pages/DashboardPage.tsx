@@ -204,6 +204,8 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                                     onTimeframeChange={setStockTimeframe}
                                     onSymbolChange={(newSymbol) => setStockSymbol(newSymbol as any)}
                                     onUseForAI={handleUseForAI}
+                                    supportLevel={stockData.metadata?.support}
+                                    resistanceLevel={stockData.metadata?.resistance}
                                 />
                                 <div className="mt-3 pt-3 border-t border-slate-700">
                                     <CacheTimestamp
@@ -261,6 +263,8 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                                     onTimeframeChange={setMetalTimeframe}
                                     onSymbolChange={(newSymbol) => setMetalSymbol(newSymbol as any)}
                                     onUseForAI={handleUseForAI}
+                                    supportLevel={metalData.metadata?.support}
+                                    resistanceLevel={metalData.metadata?.resistance}
                                 />
                                 <div className="mt-3 pt-3 border-t border-slate-700">
                                     <CacheTimestamp

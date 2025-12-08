@@ -1,5 +1,6 @@
 import type { Env, AssetDataResponse, PricePoint, Timeframe } from '../core/types';
 import { getMassiveCandles } from '../integrations/massive';
+import { computeSupportResistance } from '../utils/levels';
 
 // Helper: Check if US market is currently open
 function isMarketOpen(): boolean {
@@ -186,6 +187,9 @@ export async function handleStocksRequest(
             }
         }
 
+        // Compute support and resistance levels from final candle data
+        const { support, resistance } = computeSupportResistance(finalData);
+
         const response = {
             data: finalData,
             metadata: {
@@ -197,6 +201,8 @@ export async function handleStocksRequest(
                 liveDataIndex,
                 historicalCount: historicalData.length,
                 totalCount: finalData.length,
+                support,
+                resistance,
             },
         };
 
