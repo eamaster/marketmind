@@ -7,11 +7,12 @@ Real-time financial market analysis dashboard powered by Cloudflare Workers and 
 ## ✨ **Features**
 
 - **Real-time Stock Quotes**: Live price updates using Finnhub API
+- **Live Crypto Data**: Real-time cryptocurrency prices and OHLC charts via CoinGecko
 - **Interactive Charts**: Historical candlestick charts with Massive.com (Polygon.io) API
-- **Market News \u0026 Sentiment**: Financial news with sentiment analysis
+- **Market News & Sentiment**: Financial news with sentiment analysis
 - **AI Analysis**: Google Gemini AI-powered market insights
-- **Asset Tracking**: Track stocks, commodities (gold, oil)
--**Cloudflare KV Caching**: Aggressive caching (94%+ cache hit rate) for performance
+- **Asset Tracking**: Track stocks, crypto, and precious metals
+- **Cloudflare KV Caching**: Aggressive caching (94%+ cache hit rate) for performance
 
 ---
 
@@ -23,15 +24,16 @@ Real-time financial market analysis dashboard powered by Cloudflare Workers and 
 - Built with Vite for blazing-fast dev experience
 
 ### **Worker** (Cloudflare Workers + TypeScript)
-- Serverless API backend
+- Serverless API backend using native Fetch API
 - Cloudflare KV for caching
 - CORS-enabled for frontend access
 
 ### **APIs**
 - **Finnhub**: Real-time stock quotes (60 calls/minute)
 - **Massive.com (Polygon.io)**: Historical candles (5 calls/minute, unlimited daily)
--  **Marketaux**: Financial news
-- **Gold/Oil APIs**: Commodity prices
+- **CoinGecko**: Cryptocurrency prices and candles (10 calls/minute)
+- **Marketaux**: Financial news
+- **Gold API**: Precious metal prices
 - **Google Gemini**: AI market analysis
 
 ---
@@ -45,8 +47,8 @@ Real-time financial market analysis dashboard powered by Cloudflare Workers and 
 - API keys:
   - [Finnhub](https://finnhub.io/register) (free tier)
   - [Massive.com](https://massive.com/register) (free tier)
+  - [CoinGecko](https://www.coingecko.com/en/api/pricing) (free tier)
   - [Marketaux](https://www.marketaux.com/)
-  - [Oil Price API](https://www.oilpriceapi.com/)
   - [Gold API](https://www.goldapi.io/)
   - [Google Gemini](https://makersuite.google.com/app/apikey)
 
@@ -68,12 +70,13 @@ npm install
 # Copy example env file
 cp .dev.vars.example .dev.vars
 
-# Edit .dev.vars and add your API keys
-# Then set Cloudflare secrets
+# Edit .dev.vars and add your API keys (COINGECKO_API_KEY, MASSIVE_API_KEY, etc.)
+
+# Set Cloudflare secrets for production
 wrangler secret put FINNHUB_API_KEY
 wrangler secret put MASSIVE_API_KEY
+wrangler secret put COINGECKO_API_KEY
 wrangler secret put MARKETAUX_API_TOKEN
-wrangler secret put OILPRICE_API_KEY
 wrangler secret put GOLD_API_KEY
 wrangler secret put GEMINI_API_KEY
 
@@ -145,8 +148,8 @@ wrangler kv namespace create MARKETMIND_CACHE
 # Set production API keys as Cloudflare secrets
 wrangler secret put FINNHUB_API_KEY
 wrangler secret put MASSIVE_API_KEY
+wrangler secret put COINGECKO_API_KEY
 wrangler secret put MARKETAUX_API_TOKEN
-wrangler secret put OILPRICE_API_KEY
 wrangler secret put GOLD_API_KEY
 wrangler secret put GEMINI_API_KEY
 ```
@@ -162,7 +165,7 @@ wrangler deploy
 
 ---
 
-## 🧪 Testing \u0026 Verification
+## 🧪 Testing & Verification
 
 ### Type Checking
 ```bash
@@ -219,34 +222,17 @@ MarketMind uses a hybrid approach to provide the best free-tier experience:
 - 🟡 During market hours: Quotes show live prices, charts show recent data
 - 📊 Historical data: 2+ years of reliable data from Massive.com
 
-### API Rate Limits Comparison
-
-| Provider | Alpha Vantage | Massive.com | Finnhub |
-|----------|---------------|-------------|---------|
-| **Daily Calls** | ❌ 25/day | ✅ Unlimited | ✅ Unlimited |
-| **Per-Minute** | ❌ N/A | ✅ 5/min | ✅ 60/min |
-| **With KV Cache** | ❌ Still hits limit | ✅ ~10-30/day | ✅ ~500-1000/day |
-| **Historical Data** | ✅ 20+ years | ✅ 2+ years | ❌ Blocked (free tier) |
-| **Use Case** | ❌ Unusable | ✅ Charts | ✅ Quotes |
-
-### Other APIs
-
-
-**Data Quality**: Daily candles provide accurate historical price data suitable for:
-- Long-term trend analysis
-- Technical analysis (support/resistance calculations)
-- AI-powered market insights
+### CoinGecko API
+- **Endpoint**: Crypto prices and OHLC candles
+- **Free Tier**: 10-30 calls/minute
+- **Documentation:** [https://www.coingecko.com/en/api/documentation](https://www.coingecko.com/en/api/documentation)
+- **Robustness**: Includes fallback to price history if OHLC is missing (e.g., for MATIC/POL)
+- **Caching**: 5 minutes
 
 ### Gold API
 - **Endpoint**: Metal prices (gold, silver)
 - **Free Tier**: 100 calls/month
 - **Documentation:** [https://www.goldapi.io/](https://www.goldapi.io/)
-- **Caching**: 5 minutes
-
-### Oil Price API
-- **Endpoint**: Crude oil commodity prices
-- **Free Tier**: 100 calls/month
-- **Documentation:** [https://www.oilpriceapi.com/](https://www.oilpriceapi.com/)
 - **Caching**: 5 minutes
 
 ### Marketaux News API
@@ -277,7 +263,7 @@ MarketMind uses a hybrid approach to provide the best free-tier experience:
 - Cloudflare Workers
 - TypeScript
 - Cloudflare KV (caching)
-- Hono framework (routing)
+- Native Fetch API (no external framework)
 
 ---
 
@@ -300,6 +286,9 @@ curl https://marketmind-worker.smah0085.workers.dev/api/test-massive
 
 # Test stock data
 curl "https://marketmind-worker.smah0085.workers.dev/api/stocks?symbol=AAPL&timeframe=1W"
+
+# Test crypto data (Matic)
+curl "https://marketmind-worker.smah0085.workers.dev/api/crypto?symbol=MATIC&timeframe=1D"
 
 # Test quote
 curl "https://marketmind-worker.smah0085.workers.dev/api/quote?symbol=AAPL"
