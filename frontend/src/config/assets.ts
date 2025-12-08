@@ -34,24 +34,24 @@ export const METAL_SYMBOLS: MetalSymbol[] = [
 // Timeframe Configurations
 // ===========================
 
-export const DEFAULT_TIMEFRAME: Timeframe = '1D';
+export const DEFAULT_TIMEFRAME: Timeframe = '7D';
 
 export const TIMEFRAME_LABELS: Record<Timeframe, string> = {
-    '1D': '7 Days',
-    '1W': '1 Month',
-    '1M': '3 Months',
-    '3M': '6 Months',
+    '7D': '7 Days',
+    '1M': '1 Month',
+    '3M': '3 Months',
+    '6M': '6 Months',
     '1Y': '1 Year',
 };
 
 // Map timeframes to data resolution/granularity hints
 // Note: Massive.com free tier only provides END-OF-DAY data
 export const TIMEFRAME_RESOLUTIONS: Record<Timeframe, string> = {
-    '1D': '1day',  // Daily candles for 5 trading days
-    '1W': '1day',  // Daily candles for ~21 trading days
-    '1M': '1day',  // Daily candles for ~63 trading days
-    '3M': '1day',  // Daily candles for ~126 trading days
-    '1Y': '1day',  // Daily candles for ~252 trading days
+    '7D': '1day',  // Daily candles for ~7 days
+    '1M': '1day',  // Daily candles for ~30 days
+    '3M': '1day',  // Daily candles for ~90 days
+    '6M': '1day',  // Daily candles for ~180 days
+    '1Y': '1day',  // Daily candles for ~365 days
 };
 
 // ===========================

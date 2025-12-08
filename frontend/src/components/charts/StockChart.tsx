@@ -125,8 +125,8 @@ export function StockChart({
         const date = new Date(point.timestamp);
         let timeLabel: string;
 
-        // For daily/weekly/monthly/yearly views, show dates, not times
-        if (timeframe === '1D' || timeframe === '1W' || timeframe === '1M' || timeframe === '3M' || timeframe === '1Y') {
+        // For all our timeframes (7D, 1M, 3M, 6M, 1Y), show dates not times
+        if (timeframe === '7D' || timeframe === '1M' || timeframe === '3M' || timeframe === '6M' || timeframe === '1Y') {
             timeLabel = date.toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
