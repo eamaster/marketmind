@@ -34,7 +34,7 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
         'META': 'Meta Platforms Inc.',
     };
 
-        const cryptoNameMap: Record<CryptoSymbol, string> = {
+    const cryptoNameMap: Record<CryptoSymbol, string> = {
         'BTC': 'Bitcoin',
         'ETH': 'Ethereum',
         'SOL': 'Solana',
@@ -196,6 +196,7 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                                     onTimeframeChange={setcryptoTimeframe}
                                     onCodeChange={(newCode) => setCryptoSymbol(newCode as any)}
                                     onUseForAI={onUseForAI}
+                                    hasOhlc={cryptoData.metadata?.hasOhlc}
                                 />
                                 <div className="mt-3 pt-3 border-t border-slate-700">
                                     <CacheTimestamp

@@ -43,7 +43,7 @@ const COINGECKO_ID_MAP: Record<string, string> = {
     XRP: 'ripple',
     ADA: 'cardano',
     DOGE: 'dogecoin',
-    MATIC: 'matic-network',
+    MATIC: 'polygon-ecosystem-token', // Updated from 'matic-network' to POL (ex-MATIC)
 };
 
 // Map our Timeframe -> number of days for OHLC endpoint
@@ -56,6 +56,98 @@ function daysForTimeframe(timeframe: Timeframe): number {
         case '3M': return 180;  // Shows ~6 months
         case '1Y': return 365;  // Shows ~1 year
         default: return 30;
+    }
+}
+
+/**
+ * Fetch price history from CoinGecko market_chart endpoint (fallback when OHLC unavailable)
+ * Endpoint: /coins/{id}/market_chart
+ * Returns: Synthetic PricePoint array from price data
+ */
+async function fetchCoinGeckoPriceHistory(
+    id: string,
+    days: number,
+    env: Env
+): Promise<PricePoint[]> {
+    const apiKey = env.COINGECKO_API_KEY;
+    if (!apiKey) {
+        throw new Error('COINGECKO_API_KEY not configured');
+    }
+
+    const cache = env.MARKETMIND_CACHE ? new KVCache(env.MARKETMIND_CACHE) : null;
+    const cacheKey = `coingecko:price-history:${id}:usd:${days}`;
+
+    // Check cache first
+    if (cache) {
+        const cached = await cache.get<PricePoint[]>(cacheKey);
+        if (cached && !cached.isStale) {
+            console.log(`[CoinGecko/PriceHistory] Cache hit for ${id} days=${days}`);
+            return cached.data;
+        }
+    }
+
+    const url = `${COINGECKO_BASE_URL}/coins/${id}/market_chart?vs_currency=usd&days=${days}&interval=daily`;
+    console.log(`[CoinGecko/PriceHistory] Fetching ${id} for ${days} days (fallback mode)`);
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'accept': 'application/json',
+                'x-cg-demo-api-key': apiKey,
+            },
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[CoinGecko/PriceHistory] HTTP ${response.status} for ${url}`);
+            console.error(`[CoinGecko/PriceHistory] Error body:`, errorText);
+            throw new Error(`CoinGecko market_chart error for ${id}: HTTP ${response.status}`);
+        }
+
+        // CoinGecko market_chart returns: { prices: [[timestamp_ms, price], ...], ... }
+        const raw = await response.json() as { prices?: number[][] };
+
+        if (!raw || !Array.isArray(raw.prices) || raw.prices.length === 0) {
+            throw new Error(`CoinGecko returned no price history for ${id}`);
+        }
+
+        // Convert price data to synthetic PricePoint format (price-only, no real OHLC)
+        const pricePoints: PricePoint[] = raw.prices.map(([tsMs, price]) => {
+            return {
+                timestamp: new Date(tsMs).toISOString(),
+                open: Number(price),   // Synthetic: use price for all OHLC
+                high: Number(price),
+                low: Number(price),
+                close: Number(price),
+                volume: 0, // No volume data in market_chart
+            };
+        });
+
+        // Sort ascending by timestamp
+        pricePoints.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+        // Cache the result
+        if (cache) {
+            await cache.set(cacheKey, pricePoints, COINGECKO_CACHE_TTL);
+        }
+
+        const latest = pricePoints[pricePoints.length - 1];
+        console.warn(`[CoinGecko/PriceHistory] ${id}: ${pricePoints.length} price points (OHLC unavailable), latest close=$${latest.close.toFixed(2)}`);
+
+        return pricePoints;
+    } catch (error) {
+        console.error(`[CoinGecko/PriceHistory] Fetch error for ${id}:`, error);
+
+        // Try stale cache as fallback
+        if (cache) {
+            const staleData = await cache.getStale<PricePoint[]>(cacheKey);
+            if (staleData) {
+                console.warn(`[CoinGecko/PriceHistory] Using stale cache for ${id} days=${days}`);
+                return staleData;
+            }
+        }
+
+        throw error;
     }
 }
 
@@ -124,8 +216,10 @@ async function fetchCoinGeckoOhlc(
             };
         });
 
+        // Empty OHLC is not an error - fallback will handle it
         if (candles.length === 0) {
-            throw new Error(`CoinGecko returned no OHLC data for ${id}`);
+            console.warn(`[CoinGecko/OHLC] Empty OHLC data for ${id}, will use price history fallback`);
+            return []; // Return empty array to signal fallback needed
         }
 
         // Sort ascending by timestamp
@@ -159,12 +253,13 @@ async function fetchCoinGeckoOhlc(
 /**
  * Get crypto candles for MarketMind
  * Public API for /api/crypto route
+ * Returns data and hasOhlc flag to indicate whether full OHLC or price-only data
  */
 export async function getCoinGeckoCryptoCandles(
     symbol: string,
     timeframe: Timeframe,
     env: Env
-): Promise<PricePoint[]> {
+): Promise<{ data: PricePoint[]; hasOhlc: boolean }> {
     const normalized = normalizeCryptoSymbol(symbol);
     const id = COINGECKO_ID_MAP[normalized];
 
@@ -174,7 +269,21 @@ export async function getCoinGeckoCryptoCandles(
     }
 
     const days = daysForTimeframe(timeframe);
-    return fetchCoinGeckoOhlc(id, days, env);
+
+    // Try OHLC first
+    console.log(`[CoinGecko/Crypto] Attempting OHLC fetch for ${symbol} (${id})`);
+    const ohlcData = await fetchCoinGeckoOhlc(id, days, env);
+
+    // If OHLC has data, return it
+    if (ohlcData.length > 0) {
+        console.log(`[CoinGecko/Crypto] OHLC data available for ${symbol}`);
+        return { data: ohlcData, hasOhlc: true };
+    }
+
+    // Fallback to price history when OHLC is empty
+    console.warn(`[CoinGecko/Crypto] OHLC unavailable for ${symbol}, falling back to price history`);
+    const priceData = await fetchCoinGeckoPriceHistory(id, days, env);
+    return { data: priceData, hasOhlc: false };
 }
 
 /**
@@ -187,7 +296,7 @@ export async function getCoinGeckoCryptoQuote(
 ): Promise<{ price: number; change: number; changePercent: number }> {
     try {
         // Use 7 days (timeframe '1D') for quote calculation
-        const candles = await getCoinGeckoCryptoCandles(symbol, '1D', env);
+        const { data: candles } = await getCoinGeckoCryptoCandles(symbol, '1D', env);
 
         if (candles.length < 2) {
             const last = candles[candles.length - 1];

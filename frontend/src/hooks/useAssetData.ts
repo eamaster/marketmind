@@ -10,6 +10,7 @@ interface UseAssetDataParams {
 
 export function useAssetData({ assetType, symbol, timeframe }: UseAssetDataParams) {
     const [data, setData] = useState<PricePoint[] | null>(null);
+    const [metadata, setMetadata] = useState<any>(null); // Store API response metadata
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     const [isLive, setIsLive] = useState(false);
@@ -23,6 +24,7 @@ export function useAssetData({ assetType, symbol, timeframe }: UseAssetDataParam
             const response = await apiClient.getAssetData({ assetType, symbol, timeframe });
             console.log('API response:', response);
             setData(response.data || []);
+            setMetadata(response.metadata || null); // Capture metadata
             setIsLive(response.isLive || false); // Store isLive flag from API
         } catch (err) {
             console.error('Fetch error:', err);
@@ -41,6 +43,7 @@ export function useAssetData({ assetType, symbol, timeframe }: UseAssetDataParam
 
     return {
         data,
+        metadata, // Expose metadata (includes hasOhlc for crypto)
         isLoading,
         error,
         isLive,

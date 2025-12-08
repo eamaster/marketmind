@@ -36,6 +36,7 @@ export interface AssetDataResponse {
         symbol: string;
         timeframe: Timeframe;
         assetType: AssetType;
+        hasOhlc?: boolean; // For crypto: indicates if full OHLC data (true) or price-only fallback (false)
     };
 }
 

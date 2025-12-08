@@ -10,13 +10,13 @@ FINNHUB_API_KEY=your_finnhub_api_key_here
 # Get your free API key at: https://massive.com/register
 MASSIVE_API_KEY=your_massive_api_key_here
 
-# Marketaux API (Financial news)
-# Get your key at: https://www.marketaux.com/
-MARKETAUX_API_TOKEN=your_marketaux_token_here
+# CoinGecko API (Crypto OHLC and price data)
+# Get your free API key at: https://www.coingecko.com/en/api/pricing
+COINGECKO_API_KEY=your_coingecko_api_key_here
 
-# OilPrice API  
-# Get your key at: https://www.oilpriceapi.com/
-OILPRICE_API_KEY=your_oilprice_api_key_here
+# Marketaux API (Financial news)\r
+# Get your key at: https://www.marketaux.com/\r
+MARKETAUX_API_TOKEN=your_marketaux_token_here
 
 # Gold API
 # Get your key at: https://www.goldapi.io/

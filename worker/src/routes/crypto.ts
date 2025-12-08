@@ -15,7 +15,7 @@ export async function handleCryptoRequest(
     console.log(`[Crypto Route] Request (CoinGecko): ${symbol} ${timeframe}`);
 
     try {
-        const data = await getCoinGeckoCryptoCandles(symbol, timeframe, env);
+        const { data, hasOhlc } = await getCoinGeckoCryptoCandles(symbol, timeframe, env);
 
         const response = {
             data,
@@ -25,6 +25,7 @@ export async function handleCryptoRequest(
                 assetType: 'crypto' as const,
                 source: 'coingecko',
                 count: data.length,
+                hasOhlc, // Flag to indicate if OHLC data or price-only data
             },
         };
 

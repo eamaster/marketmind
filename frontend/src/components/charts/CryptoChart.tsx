@@ -31,6 +31,7 @@ interface CryptoChartProps {
     availableCodes?: Array<{ value: string; label: string }>;
     onUseForAI?: () => void;
     currentPrice?: number; // Optional override for header price
+    hasOhlc?: boolean; // Indicates if full OHLC data (true) or price-only fallback (false)
 }
 
 // Generate dropdown options from all CRYPTO_SYMBOLS in config
@@ -106,6 +107,7 @@ export function CryptoChart({
     availableCodes,
     onUseForAI,
     currentPrice: overridePrice,
+    hasOhlc = true, // Default to true (assume OHLC available unless told otherwise)
 }: CryptoChartProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -238,6 +240,11 @@ export function CryptoChart({
                     <span>H: ${stats.high.toFixed(2)}</span>
                     <span>L: ${stats.low.toFixed(2)}</span>
                     <span>V: {formatVolume(stats.volume)}</span>
+                    {!hasOhlc && (
+                        <span className="ml-auto text-amber-500 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded text-xs">
+                            ℹ️ Price data only
+                        </span>
+                    )}
                 </div>
             </div>
 
