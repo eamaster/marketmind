@@ -72,8 +72,8 @@ function getSentimentData(sentiment: 'bullish' | 'bearish' | 'neutral') {
         bullish: {
             label: 'Bullish',
             emoji: '🐂',
-            textColor: 'text-amber-500 dark:text-amber-400',
-            bgColor: 'bg-amber-500 dark:bg-amber-400',
+            textColor: 'text-emerald-500 dark:text-emerald-400',
+            bgColor: 'bg-emerald-500 dark:bg-emerald-400',
             score: 0.75,
         },
         bearish: {
@@ -86,8 +86,8 @@ function getSentimentData(sentiment: 'bullish' | 'bearish' | 'neutral') {
         neutral: {
             label: 'Neutral',
             emoji: '⚪',
-            textColor: 'text-amber-500 dark:text-amber-400',
-            bgColor: 'bg-amber-500 dark:bg-amber-400',
+            textColor: 'text-slate-500 dark:text-slate-400',
+            bgColor: 'bg-slate-500 dark:bg-slate-400',
             score: 0.5,
         },
     };
@@ -229,7 +229,7 @@ export function GoldChart({
                         className="text-3xl font-bold font-mono text-slate-900 dark:text-slate-100"
                     />
                     <span
-                        className={`text-lg ${isBullish ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400'
+                        className={`text-lg ${isBullish ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
                             }`}
                     >
                         {isBullish ? '↑' : '↓'} {Math.abs(priceChange).toFixed(2)}% (
