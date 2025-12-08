@@ -111,6 +111,8 @@ async function fetchGoldApiHistory(
                 high: price,
                 low: price,
                 close: price,
+                // Note: Gold-API.com doesn't provide trading volume data for precious metals
+                // Volume is set to 0 as spot prices are OTC traded without centralized volume reporting
                 volume: 0,
             };
         });

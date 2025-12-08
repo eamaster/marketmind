@@ -104,11 +104,19 @@ async function fetchCoinGeckoPriceHistory(
             throw new Error(`CoinGecko market_chart error for ${id}: HTTP ${response.status}`);
         }
 
-        // CoinGecko market_chart returns: { prices: [[timestamp_ms, price], ...], ... }
-        const raw = await response.json() as { prices?: number[][] };
+        // CoinGecko market_chart returns: { prices: [[timestamp_ms, price], ...], total_volumes: [[timestamp_ms, volume], ...] }
+        const raw = await response.json() as { prices?: number[][], total_volumes?: number[][] };
 
         if (!raw || !Array.isArray(raw.prices) || raw.prices.length === 0) {
             throw new Error(`CoinGecko returned no price history for ${id}`);
+        }
+
+        // Create a map of timestamp to volume for quick lookup
+        const volumeMap = new Map<number, number>();
+        if (raw.total_volumes && Array.isArray(raw.total_volumes)) {
+            raw.total_volumes.forEach(([tsMs, volume]) => {
+                volumeMap.set(tsMs, Number(volume));
+            });
         }
 
         // Convert price data to synthetic PricePoint format (price-only, no real OHLC)
@@ -119,7 +127,8 @@ async function fetchCoinGeckoPriceHistory(
                 high: Number(price),
                 low: Number(price),
                 close: Number(price),
-                volume: 0, // No volume data in market_chart
+                // Use volume from total_volumes if available, otherwise 0
+                volume: volumeMap.get(tsMs) || 0,
             };
         });
 
