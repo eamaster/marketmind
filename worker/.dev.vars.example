@@ -6,9 +6,10 @@
 # Get your free API key at: https://finnhub.io/register
 FINNHUB_API_KEY=your_finnhub_api_key_here
 
-# Massive.com API (Historical candles for charts)
-# Get your free API key at: https://massive.com/register
-MASSIVE_API_KEY=your_massive_api_key_here
+# Twelve Data API (Historical candles for stock charts)
+# Get your free API key at: https://twelvedata.com/
+# Free tier: 8 API calls/minute, 800 calls/day
+TWELVE_DATA_API_KEY=your_twelve_data_api_key_here
 
 # CoinGecko API (Crypto OHLC and price data)
 # Get your free API key at: https://www.coingecko.com/en/api/pricing

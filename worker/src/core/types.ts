@@ -31,6 +31,7 @@ export type Timeframe = '7D' | '1M' | '3M' | '6M' | '1Y';
 export interface Env {
     FINNHUB_API_KEY?: string;
     MASSIVE_API_KEY?: string;
+    TWELVE_DATA_API_KEY?: string;
     MARKETMIND_CACHE?: KVNamespace;
     MARKETAUX_API_TOKEN?: string;
     GOLD_API_KEY?: string;

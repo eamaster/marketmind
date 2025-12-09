@@ -30,7 +30,7 @@ Real-time financial market analysis dashboard powered by Cloudflare Workers and 
 
 ### **APIs**
 - **Finnhub**: Real-time stock quotes (60 calls/minute)
-- **Massive.com (Polygon.io)**: Historical candles (5 calls/minute, unlimited daily)
+- **Twelve Data**: Historical stock candles (8 calls/minute, 800/day)
 - **CoinGecko**: Cryptocurrency prices and candles (10 calls/minute)
 - **Marketaux**: Financial news
 - **Gold API**: Precious metal prices
@@ -46,7 +46,7 @@ Real-time financial market analysis dashboard powered by Cloudflare Workers and 
 - Cloudflare account (for Workers)
 - API keys:
   - [Finnhub](https://finnhub.io/register) (free tier)
-  - [Massive.com](https://massive.com/register) (free tier)
+  - [Twelve Data](https://twelvedata.com/) (free tier)
   - [CoinGecko](https://www.coingecko.com/en/api/pricing) (free tier)
   - [Marketaux](https://www.marketaux.com/)
   - [Gold API](https://www.goldapi.io/)

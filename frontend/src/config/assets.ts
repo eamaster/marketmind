@@ -45,7 +45,7 @@ export const TIMEFRAME_LABELS: Record<Timeframe, string> = {
 };
 
 // Map timeframes to data resolution/granularity hints
-// Note: Massive.com free tier only provides END-OF-DAY data
+// Note: Twelve Data free tier provides daily end-of-day data with minimal delay
 export const TIMEFRAME_RESOLUTIONS: Record<Timeframe, string> = {
     '7D': '1day',  // Daily candles for ~7 days
     '1M': '1day',  // Daily candles for ~30 days

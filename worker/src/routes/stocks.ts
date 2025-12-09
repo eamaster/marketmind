@@ -1,5 +1,5 @@
 import type { Env, AssetDataResponse, PricePoint, Timeframe } from '../core/types';
-import { getMassiveCandles } from '../integrations/massive';
+import { getTwelveDataCandles } from '../integrations/twelvedata';
 import { computeSupportResistance } from '../utils/levels';
 
 // Helper: Check if US market is currently open
@@ -143,9 +143,9 @@ export async function handleStocksRequest(
     }
 
     try {
-        // 1. Get historical candles from Massive.com
+        // 1. Get historical candles from Twelve Data
         console.log(`[Stocks] Fetching historical data for ${symbol} ${timeframe}...`);
-        const historicalData = await getMassiveCandles(symbol, timeframe, env);
+        const historicalData = await getTwelveDataCandles(symbol, timeframe, env);
         console.log(`[Stocks] Received ${historicalData.length} historical candles`);
 
         // 2. Check if market is open

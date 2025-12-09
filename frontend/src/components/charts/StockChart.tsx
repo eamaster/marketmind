@@ -325,31 +325,35 @@ export function StockChart({
                         domain={[0, 'dataMax * 4']}
                     />
 
-                    {/* Support/Resistance Lines */}
-                    <ReferenceLine
-                        yAxisId="price"
-                        y={support}
-                        stroke="#f87171"
-                        strokeDasharray="5 5"
-                        label={{
-                            value: `Support: $${support.toFixed(2)}`,
-                            fontSize: 10,
-                            fill: '#f87171',
-                            position: 'insideBottomLeft',
-                        }}
-                    />
-                    <ReferenceLine
-                        yAxisId="price"
-                        y={resistance}
-                        stroke="#34d399"
-                        strokeDasharray="5 5"
-                        label={{
-                            value: `Resistance: $${resistance.toFixed(2)}`,
-                            fontSize: 10,
-                            fill: '#34d399',
-                            position: 'insideTopLeft',
-                        }}
-                    />
+                    {/* Support/Resistance Lines - Only render if values are defined */}
+                    {support != null && !isNaN(support) && (
+                        <ReferenceLine
+                            yAxisId="price"
+                            y={support}
+                            stroke="#f87171"
+                            strokeDasharray="5 5"
+                            label={{
+                                value: `Support: $${support.toFixed(2)}`,
+                                fontSize: 10,
+                                fill: '#f87171',
+                                position: 'insideBottomLeft',
+                            }}
+                        />
+                    )}
+                    {resistance != null && !isNaN(resistance) && (
+                        <ReferenceLine
+                            yAxisId="price"
+                            y={resistance}
+                            stroke="#34d399"
+                            strokeDasharray="5 5"
+                            label={{
+                                value: `Resistance: $${resistance.toFixed(2)}`,
+                                fontSize: 10,
+                                fill: '#34d399',
+                                position: 'insideTopLeft',
+                            }}
+                        />
+                    )}
 
                     <Tooltip
                         contentStyle={{
@@ -456,7 +460,7 @@ export function StockChart({
                 <div>
                     <span className="font-semibold">Chart Data Information:</span>
                     <ul className="list-disc list-inside mt-1 space-y-0.5 opacity-90">
-                        <li><strong>Historical Data:</strong> End-of-day candles from Massive.com (1-2 days delayed).</li>
+                        <li><strong>Historical Data:</strong> End-of-day candles from Twelve Data.</li>
                         {isLive && <li><strong>Today's Candle:</strong> Live from Finnhub (updates in real-time during market hours 9:30 AM - 4:00 PM ET).</li>}
                         {!isLive && <li><strong>Market Status:</strong> Closed - showing last available data.</li>}
                         <li><strong>Watchlist Quotes:</strong> Real-time prices from Finnhub (updates every 10s).</li>
