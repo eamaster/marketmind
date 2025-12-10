@@ -313,8 +313,12 @@ export function StockChart({
                         stroke={isDark ? "#64748b" : "#94a3b8"}
                         tick={{ fontSize: 10, fill: isDark ? "#94a3b8" : "#64748b" }}
                         tickLine={false}
-                        domain={['auto', 'auto']}
-                        width={40}
+                        domain={[
+                            (dataMin: number) => Math.floor(dataMin * 0.95),
+                            (dataMax: number) => Math.ceil(dataMax * 1.05)
+                        ]}
+                        tickFormatter={(value: number) => `$${value.toFixed(0)}`}
+                        width={50}
                     />
 
                     {/* Volume Y-Axis (Left, hidden or scaled) */}
@@ -332,11 +336,12 @@ export function StockChart({
                             y={support}
                             stroke="#f87171"
                             strokeDasharray="5 5"
+                            strokeWidth={2}
                             label={{
                                 value: `Support: $${support.toFixed(2)}`,
-                                fontSize: 10,
+                                fontSize: 11,
                                 fill: '#f87171',
-                                position: 'insideBottomLeft',
+                                position: 'insideBottomRight',
                             }}
                         />
                     )}
@@ -346,11 +351,12 @@ export function StockChart({
                             y={resistance}
                             stroke="#34d399"
                             strokeDasharray="5 5"
+                            strokeWidth={2}
                             label={{
                                 value: `Resistance: $${resistance.toFixed(2)}`,
-                                fontSize: 10,
+                                fontSize: 11,
                                 fill: '#34d399',
-                                position: 'insideTopLeft',
+                                position: 'insideTopRight',
                             }}
                         />
                     )}
