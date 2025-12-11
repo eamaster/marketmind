@@ -96,6 +96,7 @@ function AppContent() {
               <AiChatPanel
                 messages={aiAnalyst.messages}
                 onSendQuestion={aiAnalyst.sendQuestion}
+                onClearChat={aiAnalyst.clearMessages}
                 isLoading={aiAnalyst.isLoading}
                 currentContext={{
                   assetType: aiContext.assetType,

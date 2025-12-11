@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Paperclip, Mic, Send, X } from 'lucide-react';
 import type { ChatMessage } from '../../services/types';
 
 interface AiChatPanelProps {
     messages: ChatMessage[];
     onSendQuestion: (question: string) => void;
+    onClearChat: () => void; // Clear chat history
     isLoading: boolean;
     currentContext: {
         assetType: string;
@@ -24,6 +25,7 @@ const SUGGESTED_QUESTIONS = [
 export function AiChatPanel({
     messages,
     onSendQuestion,
+    onClearChat,
     isLoading,
     currentContext,
     onClose,
@@ -44,6 +46,22 @@ export function AiChatPanel({
         }
     };
 
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+    const handleClearClick = () => {
+        if (messages.length === 0) return;
+        setShowClearConfirm(true);
+    };
+
+    const handleConfirmClear = () => {
+        setShowClearConfirm(false);
+        onClearChat();
+    };
+
+    const handleCancelClear = () => {
+        setShowClearConfirm(false);
+    };
+
     return (
         <div
             className="flex flex-col h-full bg-white dark:bg-slate-900/50 rounded-2xl overflow-hidden"
@@ -52,29 +70,43 @@ export function AiChatPanel({
         >
             {/* GRADIENT HEADER */}
             <div className="bg-gradient-to-r from-blue-600 to-cyan-500 p-4 border-b border-slate-200 dark:border-slate-700">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-lg font-semibold text-white flex items-center gap-2 truncate">
-                            🤖 AI Market Analyst
+                        <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                            🤖 AI Analyst
                         </h2>
-                        <p className="text-xs text-blue-100 mt-0.5 truncate">
-                            Powered by Google Gemini
+                        <p className="text-xs text-blue-100 mt-0.5">
+                            Powered by Gemini
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                         {/* Context Badge */}
-                        <div className="px-3 py-1 rounded-full bg-white/20 backdrop-blur text-xs font-medium text-white whitespace-nowrap">
+                        <div className="hidden sm:flex px-2 py-1 rounded-full bg-white/20 backdrop-blur text-xs font-medium text-white whitespace-nowrap">
                             📊 {currentContext.symbol} · {currentContext.timeframe}
                         </div>
+
+                        {/* Clear Chat Button */}
+                        {messages.length > 0 && (
+                            <button
+                                onClick={handleClearClick}
+                                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                                aria-label="Clear chat history"
+                                title="Clear all messages"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        )}
 
                         {/* Close Button */}
                         <button
                             onClick={onClose}
-                            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
                             aria-label="Close chat"
                         >
-                            <X size={18} />
+                            <X size={16} />
                         </button>
                     </div>
                 </div>
@@ -96,6 +128,14 @@ export function AiChatPanel({
                         <p className="text-xs text-slate-500">
                             I'll analyze charts and news to provide insights.
                         </p>
+
+                        {/* Fair Use Notice */}
+                        <div className="mt-4 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-200">
+                            <p className="font-semibold">⚡ Fair Use Policy</p>
+                            <p className="mt-1">
+                                Limited to <strong>10 questions per hour</strong> to keep this free service sustainable.
+                            </p>
+                        </div>
 
                         {/* SUGGESTED QUESTIONS */}
                         <div className="mt-6">
@@ -177,6 +217,34 @@ export function AiChatPanel({
 
                 <div ref={messagesEndRef} />
             </div>
+
+            {/* Clear Confirmation Modal */}
+            {showClearConfirm && (
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                            Clear Chat History?
+                        </h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">
+                            This will permanently delete all messages. This cannot be undone.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleCancelClear}
+                                className="flex-1 px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-900 dark:text-white font-medium transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmClear}
+                                className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors"
+                            >
+                                Clear All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* INPUT AREA */}
             <div className="border-t border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-900/50">

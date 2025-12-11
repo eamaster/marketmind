@@ -62,9 +62,15 @@ export function useAiAnalyst(context: AiContext) {
         }
     };
 
+    const clearMessages = () => {
+        setMessages([]);
+        setError(null);
+    };
+
     return {
         messages,
         sendQuestion,
+        clearMessages,
         isLoading,
         error,
     };

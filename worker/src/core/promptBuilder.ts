@@ -3,9 +3,9 @@ import type { PricePoint, NewsArticle } from '../core/types';
 // Build a compact, structured prompt for Gemini from market data
 
 interface PromptInput {
-    assetType: 'stock' | 'oil' | 'metal';
+    assetType: 'stock' | 'crypto' | 'metal';
     symbol?: string;
-    timeframe: '1D' | '1W' | '1M' | '3M' | '1Y';
+    timeframe: '7D' | '1M' | '3M' | '6M' | '1Y';
     chartData: PricePoint[];
     news: NewsArticle[];
     question: string;
