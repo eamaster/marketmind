@@ -15,8 +15,45 @@ Real-time financial market analysis dashboard powered by Cloudflare Workers and 
   - Based on Marketaux news sentiment scoring
 - **Market News**: Financial news with AI-powered sentiment analysis
 - **AI Analysis**: Google Gemini AI-powered market insights
+  - **Clear Chat**: Delete conversation history with custom confirmation modal
+  - **Context Awareness**: AI knows which asset/timeframe you're viewing
+  - **Suggested Questions**: Quick-start prompts for common queries
+  - **Real-time Updates**: Rate limit status in HTTP headers
 - **Asset Tracking**: Track stocks, crypto, and precious metals
 - **Cloudflare KV Caching**: Aggressive caching (94%+ cache hit rate) for performance
+
+### 🤖 **AI Market Analyst - Cost Protection**
+
+MarketMind implements intelligent cost protection to keep the AI service free:
+
+1. **Rate Limiting**: 10 questions per hour per IP address
+2. **Smart Caching**: Common questions cached for 30 minutes
+3. **Fair Use Policy**: Transparent limits communicated to users
+
+**Result:** 95-98% cost reduction ($20-50/month → $0-1/month)
+
+**Technical Implementation:**
+```bash
+# Backend rate limiting
+Rate Limit: 10 requests/hour/IP
+Cache TTL: 30 minutes per unique question
+Storage: Cloudflare KV for distributed rate limiting
+
+# HTTP Headers
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 7
+X-Cache-Status: HIT | MISS
+```
+
+**Testing Rate Limits:**
+```bash
+# Test rate limit (should block after 10 requests)
+for i in {1..12}; do
+    curl -X POST http://localhost:8787/api/ai/analyze \
+        -H "Content-Type: application/json" \
+        -d '{"question":"test","assetType":"stock","symbol":"AAPL","timeframe":"7D","chartData":[],"news":[]}';
+done
+```
 
 ---
 

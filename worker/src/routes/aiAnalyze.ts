@@ -96,7 +96,10 @@ export async function handleAiAnalyzeRequest(
         // Try cache for common questions
         const cache = env.MARKETMIND_CACHE ? new KVCache(env.MARKETMIND_CACHE) : null;
         const questionHash = await hashQuestion(question);
-        const cacheKey = `ai:${assetType}:${symbol}:${timeframe}:${questionHash}`;
+
+        // Add time bucket to prevent stale cached responses
+        const hourBucket = Math.floor(Date.now() / (1800 * 1000)); // 30-min buckets
+        const cacheKey = `ai:${assetType}:${symbol}:${timeframe}:${hourBucket}:${questionHash}`;
         const CACHE_TTL = 1800; // 30 minutes
 
         if (cache) {

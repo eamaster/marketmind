@@ -47,13 +47,24 @@ export function useAiAnalyst(context: AiContext) {
             };
             setMessages(prev => [...prev, aiMessage]);
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to get AI response';
+            let errorMessage = 'Failed to get AI response';
+            let isRateLimit = false;
+
+            if (err instanceof Error) {
+                errorMessage = err.message;
+                isRateLimit = errorMessage.includes('429') ||
+                    errorMessage.includes('Rate limit') ||
+                    errorMessage.includes('too many requests');
+            }
+
             setError(new Error(errorMessage));
 
-            // Add error message as AI response
+            // Show user-friendly rate limit message
             const errorAiMessage: ChatMessage = {
                 role: 'ai',
-                content: `Sorry, I encountered an error: ${errorMessage}`,
+                content: isRateLimit
+                    ? `⏱️ You've reached the hourly limit (10 questions per hour). This helps keep the service free for everyone!\n\n**Please try again in:** 1 hour\n\n💡 **Tip:** Use the suggested questions below to get started quickly!`
+                    : `Sorry, I encountered an error: ${errorMessage}`,
                 timestamp: new Date().toISOString(),
             };
             setMessages(prev => [...prev, errorAiMessage]);
