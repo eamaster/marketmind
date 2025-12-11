@@ -50,12 +50,12 @@ const COINGECKO_ID_MAP: Record<string, string> = {
 // CoinGecko OHLC supports: 7, 30, 90, 180, 365 days max
 function daysForTimeframe(timeframe: Timeframe): number {
     switch (timeframe) {
-        case '1D': return 7;    // Shows 7 days (7D in UI)
-        case '1W': return 30;   // Shows ~1 month
-        case '1M': return 90;   // Shows ~3 months
-        case '3M': return 180;  // Shows ~6 months
-        case '1Y': return 365;  // Shows ~1 year
-        default: return 30;
+        case '7D': return 7;     // ✅ 7 days
+        case '1M': return 30;    // ✅ 30 days (~1 month)
+        case '3M': return 90;    // ✅ 90 days (~3 months)
+        case '6M': return 180;   // ✅ 180 days (~6 months)
+        case '1Y': return 365;   // ✅ 365 days (1 year)
+        default: return 7;       // ✅ Default to 7 days
     }
 }
 
