@@ -24,6 +24,7 @@ interface CryptoChartProps {
     code?: string;
     name?: string;
     sentiment?: 'bullish' | 'bearish' | 'neutral';
+    sentimentScore?: number | null; // Raw score from API (-1 to +1)
     isLoading?: boolean;
     error?: Error | null;
     onTimeframeChange?: (tf: Timeframe) => void;
@@ -68,28 +69,48 @@ function calculateSupportResistance(data: PricePoint[]): {
     };
 }
 
-function getSentimentData(sentiment: 'bullish' | 'bearish' | 'neutral') {
+function getSentimentData(
+    sentiment: 'bullish' | 'bearish' | 'neutral',
+    rawScore?: number | null
+) {
+    // Map Marketaux score (-1 to +1) to percentage (0 to 100%)
+    let barPercentage: number;
+
+    if (rawScore !== null && rawScore !== undefined) {
+        // Validate score is in expected range
+        if (rawScore < -1 || rawScore > 1) {
+            console.warn(`[CryptoChart] Invalid sentiment score: ${rawScore}. Expected -1 to +1`);
+            rawScore = 0; // Default to neutral
+        }
+        // Convert -1..+1 to 0..100%
+        barPercentage = ((rawScore + 1) / 2) * 100;
+    } else {
+        // Fallback if no score available
+        barPercentage = sentiment === 'bullish' ? 60 :
+            sentiment === 'bearish' ? 40 : 50;
+    }
+
     const config = {
         bullish: {
             label: 'Bullish',
             emoji: '🐂',
             textColor: 'text-emerald-500 dark:text-emerald-400',
             bgColor: 'bg-emerald-500 dark:bg-emerald-400',
-            score: 0.75,
+            score: barPercentage / 100,
         },
         bearish: {
             label: 'Bearish',
             emoji: '🐻',
             textColor: 'text-red-500 dark:text-red-400',
             bgColor: 'bg-red-500 dark:bg-red-400',
-            score: 0.25,
+            score: barPercentage / 100,
         },
         neutral: {
             label: 'Neutral',
             emoji: '⚪',
             textColor: 'text-slate-500 dark:text-slate-400',
             bgColor: 'bg-slate-500 dark:bg-slate-400',
-            score: 0.5,
+            score: barPercentage / 100,
         },
     };
     return config[sentiment];
@@ -100,7 +121,8 @@ export function CryptoChart({
     timeframe,
     code = 'BTC',
     name = 'Bitcoin',
-    sentiment = 'bearish',
+    sentiment,
+    sentimentScore,
     isLoading = false,
     onTimeframeChange,
     onCodeChange,
@@ -111,6 +133,9 @@ export function CryptoChart({
 }: CryptoChartProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+
+    // Fallback if no sentiment provided
+    const effectiveSentiment = sentiment || 'neutral';
 
     if (isLoading) {
         return (
@@ -167,7 +192,7 @@ export function CryptoChart({
 
     const { support, resistance } = calculateSupportResistance(data);
     const isBullish = priceChange >= 0;
-    const sentimentData = getSentimentData(sentiment);
+    const sentimentData = getSentimentData(effectiveSentiment, sentimentScore);
 
     return (
         <div
@@ -361,6 +386,11 @@ export function CryptoChart({
                         <span className={sentimentData.textColor}>
                             {sentimentData.label} {sentimentData.emoji}
                         </span>
+                        {sentimentScore !== null && sentimentScore !== undefined && (
+                            <span className="ml-2 text-xs text-slate-400">
+                                (Score: {sentimentScore.toFixed(2)})
+                            </span>
+                        )}
                     </span>
                 </div>
                 <div

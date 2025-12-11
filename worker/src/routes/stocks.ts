@@ -1,6 +1,7 @@
-import type { Env, AssetDataResponse, PricePoint, Timeframe } from '../core/types';
+import type { Env, AssetDataResponse, PricePoint, Timeframe, SentimentSummary } from '../core/types';
 import { getTwelveDataCandles } from '../integrations/twelvedata';
 import { computeSupportResistance } from '../utils/levels';
+import { getNews } from '../integrations/marketaux';
 
 // Helper: Check if US market is currently open
 function isMarketOpen(): boolean {
@@ -190,6 +191,23 @@ export async function handleStocksRequest(
         // Compute support and resistance levels from final candle data
         const { support, resistance } = computeSupportResistance(finalData);
 
+        // Fetch sentiment from Marketaux
+        console.log(`[Stocks] Fetching sentiment for ${symbol}...`);
+        let sentimentData: SentimentSummary | null = null;
+        let sentimentError: string | undefined = undefined;
+
+        try {
+            const { sentiment } = await getNews('stock', symbol, timeframe, env);
+            sentimentData = sentiment;
+            console.log(`[Stocks] ✅ Sentiment for ${symbol}: ${sentiment.label} (score: ${sentiment.score})`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(`[Stocks] ❌ Failed to fetch sentiment for ${symbol}:`, errorMessage);
+            sentimentError = errorMessage;
+            // Default to neutral if API fails to avoid breaking the response
+            sentimentData = { score: null, label: 'neutral' };
+        }
+
         const response = {
             data: finalData,
             metadata: {
@@ -203,6 +221,8 @@ export async function handleStocksRequest(
                 totalCount: finalData.length,
                 support,
                 resistance,
+                sentiment: sentimentData,
+                sentimentError,
             },
         };
 

@@ -199,6 +199,7 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                                     symbol={stockSymbol}
                                     companyName={stockNameMap[stockSymbol]}
                                     sentiment={stockNews.sentiment?.label || 'neutral'}
+                                    sentimentScore={stockData.metadata?.sentiment?.score}
                                     isLoading={stockData.isLoading}
                                     error={stockData.error}
                                     onTimeframeChange={setStockTimeframe}
@@ -229,6 +230,7 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                                     code={CryptoSymbol}
                                     name={cryptoNameMap[CryptoSymbol]}
                                     sentiment={cryptoNews.sentiment?.label || 'bearish'}
+                                    sentimentScore={cryptoData.metadata?.sentiment?.score}
                                     isLoading={cryptoData.isLoading}
                                     error={cryptoData.error}
                                     onTimeframeChange={setcryptoTimeframe}
@@ -258,6 +260,7 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                                     symbol={metalSymbol === 'XAU' ? 'XAU/USD' : 'XAG/USD'}
                                     name={metalSymbol === 'XAU' ? 'Gold Spot' : 'Silver Spot'}
                                     sentiment={metalNews.sentiment?.label || 'neutral'}
+                                    sentimentScore={metalData.metadata?.sentiment?.score}
                                     isLoading={metalData.isLoading}
                                     error={metalData.error}
                                     onTimeframeChange={setMetalTimeframe}

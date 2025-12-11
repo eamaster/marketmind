@@ -24,7 +24,7 @@ export interface SentimentSummary {
     label: 'bullish' | 'bearish' | 'neutral';
 }
 
-export type AssetType = 'stock' | 'oil' | 'metal';
+export type AssetType = 'stock' | 'crypto' | 'metal';
 export type Timeframe = '7D' | '1M' | '3M' | '6M' | '1Y';
 
 // Environment bindings interface
@@ -62,6 +62,8 @@ export interface AssetDataResponse {
         assetType: AssetType;
         support?: number | null;
         resistance?: number | null;
+        sentiment?: SentimentSummary; // Sentiment from Marketaux news analysis
+        sentimentError?: string; // Error message if sentiment fetch failed
     };
 }
 

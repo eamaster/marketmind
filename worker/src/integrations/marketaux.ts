@@ -1,7 +1,21 @@
 import type { Env, NewsArticle, SentimentSummary, AssetType, Timeframe } from '../core/types';
+import { KVCache } from '../core/cache';
 
 // Marketaux news API client
 // Docs: https://www.marketaux.com/documentation
+
+// Map crypto ticker symbols to full names for better news matching
+const CRYPTO_NAMES: Record<string, string> = {
+    'BTC': 'Bitcoin',
+    'ETH': 'Ethereum',
+    'USDT': 'Tether',
+    'BNB': 'Binance Coin',
+    'SOL': 'Solana',
+    'ADA': 'Cardano',
+    'XRP': 'Ripple',
+    'DOGE': 'Dogecoin',
+    'MATIC': 'Polygon',
+};
 
 export async function getNews(
     assetType: AssetType,
@@ -9,6 +23,23 @@ export async function getNews(
     timeframe: Timeframe,
     env: Env
 ): Promise<{ articles: NewsArticle[]; sentiment: SentimentSummary }> {
+    // Initialize cache
+    const cache = env.MARKETMIND_CACHE ? new KVCache(env.MARKETMIND_CACHE) : null;
+    const cacheKey = `sentiment:${assetType}:${symbol || 'all'}:${timeframe}`;
+    const CACHE_TTL = 3600; // 1 hour (sentiment changes slowly)
+
+    // Check cache first
+    if (cache) {
+        const cached = await cache.get<{ articles: NewsArticle[]; sentiment: SentimentSummary }>(cacheKey);
+        if (cached && !cached.isStale) {
+            console.log(`[Marketaux] ✅ Cache HIT for ${assetType} ${symbol || ''} (${timeframe})`);
+            return cached.data;
+        }
+        if (cached && cached.isStale) {
+            console.log(`[Marketaux] ⏰ Cache STALE for ${assetType} ${symbol || ''} (${timeframe})`);
+        }
+    }
+
     const apiToken = env.MARKETAUX_API_TOKEN;
 
     if (!apiToken) {
@@ -18,7 +49,7 @@ export async function getNews(
 
     try {
         const url = buildNewsUrl(assetType, symbol, timeframe, apiToken);
-        console.log(`[Marketaux] Fetching news for ${assetType} ${symbol || ''} (${timeframe})`);
+        console.log(`[Marketaux] 🌐 API call for ${assetType} ${symbol || ''} (${timeframe})`);
         console.log(`[Marketaux] URL: ${url.toString().replace(apiToken, 'API_TOKEN')}`);
 
         const response = await fetch(url.toString());
@@ -34,9 +65,26 @@ export async function getNews(
         console.log(`[Marketaux] Received ${data?.data?.length || 0} articles`);
         const normalized = normalizeNewsData(data);
         console.log(`[Marketaux] Normalized ${normalized.articles.length} articles, sentiment: ${normalized.sentiment.label}`);
+
+        // Store in cache
+        if (cache) {
+            await cache.set(cacheKey, normalized, CACHE_TTL);
+            console.log(`[Marketaux] 💾 Cached result for ${assetType} ${symbol || ''} (TTL: ${CACHE_TTL}s)`);
+        }
+
         return normalized;
     } catch (error) {
         console.error('[Marketaux] Error fetching data:', error);
+
+        // Try stale cache as fallback
+        if (cache) {
+            const stale = await cache.getStale<{ articles: NewsArticle[]; sentiment: SentimentSummary }>(cacheKey);
+            if (stale) {
+                console.warn('[Marketaux] ⚠️ Using STALE cache due to API error');
+                return stale;
+            }
+        }
+
         console.warn('[Marketaux] Falling back to mock data');
         return getMockNews(assetType, symbol);
     }
@@ -61,17 +109,25 @@ function buildNewsUrl(assetType: AssetType, symbol: string | undefined, timefram
     let publishedAfter: Date;
 
     switch (timeframe) {
-        case '1D':
-            // Get news from last 3 days for daily view
-            publishedAfter = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-            break;
-        case '1W':
-            // Get news from last week
+        case '7D':
+            // Get news from last 7 days
             publishedAfter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             break;
         case '1M':
             // Get news from last 30 days
             publishedAfter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+        case '3M':
+            // Get news from last 90 days
+            publishedAfter = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+            break;
+        case '6M':
+            // Get news from last 180 days
+            publishedAfter = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+            break;
+        case '1Y':
+            // Get news from last 365 days
+            publishedAfter = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
             break;
         default:
             publishedAfter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -86,9 +142,11 @@ function buildNewsUrl(assetType: AssetType, symbol: string | undefined, timefram
     // Build query based on asset type
     if (assetType === 'stock' && symbol) {
         url.searchParams.set('symbols', symbol);
-    } else if (assetType === 'oil') {
-        url.searchParams.set('industries', 'Energy');
-        url.searchParams.set('search', 'crude oil OR WTI OR Brent');
+    } else if (assetType === 'crypto' && symbol) {
+        // Use full cryptocurrency name for better news matching
+        const cryptoName = CRYPTO_NAMES[symbol.toUpperCase()] || symbol;
+        url.searchParams.set('search', `${cryptoName} OR ${symbol} OR cryptocurrency`);
+        url.searchParams.set('filter_entities', 'true');
     } else if (assetType === 'metal') {
         url.searchParams.set('search', 'gold OR silver OR precious metals');
     }

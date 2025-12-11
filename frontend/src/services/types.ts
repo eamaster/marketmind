@@ -39,6 +39,8 @@ export interface AssetDataResponse {
         hasOhlc?: boolean; // For crypto: indicates if full OHLC data (true) or price-only fallback (false)
         support?: number | null; // Support level computed from recent lows
         resistance?: number | null; // Resistance level computed from recent highs
+        sentiment?: SentimentSummary; // Sentiment from Marketaux API
+        sentimentError?: string; // Error message if sentiment fetch failed
     };
 }
 

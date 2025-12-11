@@ -22,6 +22,7 @@ interface StockChartProps {
     symbol?: string;
     companyName?: string;
     sentiment?: 'bullish' | 'bearish' | 'neutral';
+    sentimentScore?: number | null; // Raw score from API (-1 to +1)
     isLoading?: boolean;
     error?: Error | null;
     onTimeframeChange?: (tf: Timeframe) => void;
@@ -73,11 +74,49 @@ function calculateSupportResistance(data: PricePoint[]): { support: number; resi
 }
 
 // Helper: Get sentiment data
-function getSentimentData(sentiment: 'bullish' | 'bearish' | 'neutral') {
+function getSentimentData(
+    sentiment: 'bullish' | 'bearish' | 'neutral',
+    rawScore?: number | null
+) {
+    // Map Marketaux score (-1 to +1) to percentage (0 to 100%)
+    let barPercentage: number;
+
+    if (rawScore !== null && rawScore !== undefined) {
+        // Validate score is in expected range
+        if (rawScore < -1 || rawScore > 1) {
+            console.warn(`[StockChart] Invalid sentiment score: ${rawScore}. Expected -1 to +1`);
+            rawScore = 0; // Default to neutral
+        }
+        // Convert -1..+1 to 0..100%
+        barPercentage = ((rawScore + 1) / 2) * 100;
+    } else {
+        // Fallback if no score available
+        barPercentage = sentiment === 'bullish' ? 60 :
+            sentiment === 'bearish' ? 40 : 50;
+    }
+
     const config = {
-        bullish: { label: 'Bullish', emoji: '🐂', textColor: 'text-emerald-500 dark:text-emerald-400', bgColor: 'bg-emerald-500 dark:bg-emerald-400', score: 0.75 },
-        bearish: { label: 'Bearish', emoji: '🐻', textColor: 'text-red-500 dark:text-red-400', bgColor: 'bg-red-500 dark:bg-red-400', score: 0.25 },
-        neutral: { label: 'Neutral', emoji: '⚪', textColor: 'text-slate-500 dark:text-slate-400', bgColor: 'bg-slate-500 dark:bg-slate-400', score: 0.5 },
+        bullish: {
+            label: 'Bullish',
+            emoji: '🐂',
+            textColor: 'text-emerald-500 dark:text-emerald-400',
+            bgColor: 'bg-emerald-500 dark:bg-emerald-400',
+            score: barPercentage / 100,
+        },
+        bearish: {
+            label: 'Bearish',
+            emoji: '🐻',
+            textColor: 'text-red-500 dark:text-red-400',
+            bgColor: 'bg-red-500 dark:bg-red-400',
+            score: barPercentage / 100,
+        },
+        neutral: {
+            label: 'Neutral',
+            emoji: '⚪',
+            textColor: 'text-slate-500 dark:text-slate-400',
+            bgColor: 'bg-slate-500 dark:bg-slate-400',
+            score: barPercentage / 100,
+        },
     };
     return config[sentiment];
 }
@@ -87,7 +126,8 @@ export function StockChart({
     timeframe,
     symbol = 'AAPL',
     companyName = 'Apple Inc.',
-    sentiment = 'bullish',
+    sentiment,
+    sentimentScore,
     isLoading = false,
     onTimeframeChange,
     onSymbolChange,
@@ -100,6 +140,9 @@ export function StockChart({
 }: StockChartProps) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+
+    // Fallback if no sentiment provided
+    const effectiveSentiment = sentiment || 'neutral';
 
     if (isLoading) {
         return (
@@ -182,7 +225,7 @@ export function StockChart({
     const support = supportLevel ?? localSupport;
     const resistance = resistanceLevel ?? localResistance;
     const isBullish = priceChange >= 0;
-    const sentimentData = getSentimentData(sentiment);
+    const sentimentData = getSentimentData(effectiveSentiment, sentimentScore);
 
     return (
         <div
@@ -406,6 +449,11 @@ export function StockChart({
                         <span className={sentimentData.textColor}>
                             {sentimentData.label} {sentimentData.emoji}
                         </span>
+                        {sentimentScore !== null && sentimentScore !== undefined && (
+                            <span className="ml-2 text-xs text-slate-400">
+                                (Score: {sentimentScore.toFixed(2)})
+                            </span>
+                        )}
                     </span>
                 </div>
                 <div
