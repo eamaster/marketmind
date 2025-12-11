@@ -132,26 +132,34 @@ async function fetchGoldApiHistory(
 
 function getDateRange(timeframe: Timeframe): { startTimestamp: number; endTimestamp: number; daysBack: number } {
     const now = new Date();
-    const endTimestamp = Math.floor(now.getTime() / 1000); // Current time in Unix timestamp
+    const endTimestamp = Math.floor(now.getTime() / 1000);
 
-    let daysBack = 7;
+    let daysBack: number;
     switch (timeframe) {
-        case '1D': daysBack = 7; break;
-        case '1W': daysBack = 30; break;
-        case '1M': daysBack = 90; break;
-        case '3M': daysBack = 180; break;
-        case '1Y': daysBack = 365; break;
+        case '7D':
+            daysBack = 7;     // ✅ 7 days
+            break;
+        case '1M':
+            daysBack = 30;    // ✅ 30 days (~1 month)
+            break;
+        case '3M':
+            daysBack = 90;    // ✅ 90 days (~3 months)
+            break;
+        case '6M':
+            daysBack = 180;   // ✅ 180 days (~6 months)
+            break;
+        case '1Y':
+            daysBack = 365;   // ✅ 365 days (1 year)
+            break;
+        default:
+            daysBack = 7;     // ✅ Default to 7 days
     }
 
     const startDate = new Date(now);
     startDate.setDate(now.getDate() - daysBack);
     const startTimestamp = Math.floor(startDate.getTime() / 1000);
 
-    return {
-        startTimestamp,
-        endTimestamp,
-        daysBack,
-    };
+    return { startTimestamp, endTimestamp, daysBack };
 }
 
 export async function getGoldQuote(
