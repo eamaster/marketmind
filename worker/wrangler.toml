@@ -16,8 +16,9 @@ binding = "MARKETMIND_CACHE"
 id = "058d039ea4434a37930ef46065008254"
 
 # Secrets (set via wrangler secret put or dashboard):
-# - OILPRICE_API_KEY
-# - GOLD_API_KEY
-# - TWELVEDATA_API_KEY
-# - MARKETAUX_API_TOKEN
-# - GEMINI_API_KEY
+# - FINNHUB_API_KEY          # Stock quotes and live market data
+# - TWELVE_DATA_API_KEY      # Historical stock candles
+# - COINGECKO_API_KEY        # Crypto market data
+# - MARKETAUX_API_TOKEN      # News and sentiment analysis
+# - GOLD_API_KEY             # Precious metals pricing
+# - GEMINI_API_KEY           # AI-powered analysis

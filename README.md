@@ -8,8 +8,12 @@ Real-time financial market analysis dashboard powered by Cloudflare Workers and 
 
 - **Real-time Stock Quotes**: Live price updates using Finnhub API
 - **Live Crypto Data**: Real-time cryptocurrency prices and OHLC charts via CoinGecko
-- **Interactive Charts**: Historical candlestick charts with Massive.com (Polygon.io) API
-- **Market News & Sentiment**: Financial news with sentiment analysis
+- **Interactive Charts**: Historical candlestick charts with support/resistance levels
+- **Sentiment Indicators**: Real-time market sentiment from news analysis
+  - Displayed on all charts (stocks, crypto, precious metals)
+  - Progress bar shows sentiment strength (-1.0 to +1.0)
+  - Based on Marketaux news sentiment scoring
+- **Market News**: Financial news with AI-powered sentiment analysis
 - **AI Analysis**: Google Gemini AI-powered market insights
 - **Asset Tracking**: Track stocks, crypto, and precious metals
 - **Cloudflare KV Caching**: Aggressive caching (94%+ cache hit rate) for performance
@@ -32,7 +36,10 @@ Real-time financial market analysis dashboard powered by Cloudflare Workers and 
 - **Finnhub**: Real-time stock quotes (60 calls/minute)
 - **Twelve Data**: Historical stock candles (8 calls/minute, 800/day)
 - **CoinGecko**: Cryptocurrency prices and candles (10 calls/minute)
-- **Marketaux**: Financial news
+- **Marketaux**: Financial news with **sentiment analysis** (100 articles/day)
+  - Free Tier: 100 articles/day
+  - Cache: **1 hour TTL** (sentiment changes slowly)
+  - Provides sentiment scores from -1.0 (bearish) to +1.0 (bullish)
 - **Gold API**: Precious metal prices
 - **Google Gemini**: AI market analysis
 
