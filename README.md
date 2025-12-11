@@ -114,11 +114,11 @@ npm install
 # Copy example env file
 cp .dev.vars.example .dev.vars
 
-# Edit .dev.vars and add your API keys (COINGECKO_API_KEY, MASSIVE_API_KEY, etc.)
+# Edit .dev.vars and add your API keys
 
 # Set Cloudflare secrets for production
 wrangler secret put FINNHUB_API_KEY
-wrangler secret put MASSIVE_API_KEY
+wrangler secret put TWELVE_DATA_API_KEY
 wrangler secret put COINGECKO_API_KEY
 wrangler secret put MARKETAUX_API_TOKEN
 wrangler secret put GOLD_API_KEY
@@ -174,7 +174,7 @@ npm run deploy
 
 **Configuration:**
 - Base path is set in `vite.config.ts`: `base: '/marketmind/'`
-- Production API URL: `https://marketmind-worker.smah0085.workers.dev/api`
+- Production API URL: Set in `frontend/src/services/api.ts`
 
 ### Worker → Cloudflare
 
@@ -191,7 +191,7 @@ wrangler kv namespace create MARKETMIND_CACHE
 ```bash
 # Set production API keys as Cloudflare secrets
 wrangler secret put FINNHUB_API_KEY
-wrangler secret put MASSIVE_API_KEY
+wrangler secret put TWELVE_DATA_API_KEY
 wrangler secret put COINGECKO_API_KEY
 wrangler secret put MARKETAUX_API_TOKEN
 wrangler secret put GOLD_API_KEY
@@ -205,7 +205,7 @@ npm run deploy
 wrangler deploy
 ```
 
-**Deployed at:** https://marketmind-worker.smah0085.workers.dev
+**Deployed at:** `https://your-worker-name.workers.dev` (update in `frontend/src/services/api.ts`)
 
 ---
 
@@ -247,24 +247,23 @@ MarketMind uses a hybrid approach to provide the best free-tier experience:
 - **Status:** Working perfectly for quotes
 - **Documentation:** [https://finnhub.io/docs/api](https://finnhub.io/docs/api)
 
-#### 2. Massive.com (Historical Charts)
+#### 2. Twelve Data (Historical Charts)
 - **Purpose:** Daily candlestick data for charts
-- **Limit:** 5 calls/minute (free tier), unlimited daily calls
-- **Rate Limit Protection:** 12s delay between calls
+- **Limit:** 8 calls/minute, 800 calls/day (free tier)
+- **Rate Limit Protection:** 8s delay between calls
 - **Caching:** Aggressive KV caching to minimize API usage
 - **Fallback:** Stale cache is served if API limit is reached
-- **Documentation:** [https://massive.com/docs/rest/quickstart](https://massive.com/docs/rest/quickstart)
-- **Note:** Formerly Polygon.io (rebranded October 2025)
+- **Documentation:** [https://twelvedata.com/docs](https://twelvedata.com/docs)
 
 #### Why Two APIs?
 
-**Problem**: Previous providers had severe limitations (Alpha Vantage: 25/day, Finnhub free tier: blocked candles)  
-**Solution**: Massive.com provides 5 calls/minute with unlimited daily calls + KV caching
+**Problem**: Single API providers often have severe rate limitations  
+**Solution**: Twelve Data provides reliable historical data + KV caching for efficiency
 
 **Data Consistency**:
 - ✅ After market close (4:00 PM - 9:30 AM ET): Perfect consistency
 - 🟡 During market hours: Quotes show live prices, charts show recent data
-- 📊 Historical data: 2+ years of reliable data from Massive.com
+- 📊 Historical data: Reliable data from Twelve Data
 
 ### CoinGecko API
 - **Endpoint**: Crypto prices and OHLC candles
@@ -325,20 +324,19 @@ wrangler secret list
 
 ### Test Endpoints
 ```bash
-# Test Massive.com integration
-curl https://marketmind-worker.smah0085.workers.dev/api/test-massive
+# Replace YOUR_WORKER_URL with your actual worker URL
 
 # Test stock data
-curl "https://marketmind-worker.smah0085.workers.dev/api/stocks?symbol=AAPL&timeframe=1W"
+curl "YOUR_WORKER_URL/api/stocks?symbol=AAPL&timeframe=1W"
 
-# Test crypto data (Matic)
-curl "https://marketmind-worker.smah0085.workers.dev/api/crypto?symbol=MATIC&timeframe=1D"
+# Test crypto data
+curl "YOUR_WORKER_URL/api/crypto?symbol=BTC&timeframe=1D"
 
 # Test quote
-curl "https://marketmind-worker.smah0085.workers.dev/api/quote?symbol=AAPL"
+curl "YOUR_WORKER_URL/api/quote?symbol=AAPL"
 
 # Test news
-curl "https://marketmind-worker.smah0085.workers.dev/api/news?symbols=AAPL,TSLA"
+curl "YOUR_WORKER_URL/api/news?symbols=AAPL,TSLA"
 ```
 
 ---
