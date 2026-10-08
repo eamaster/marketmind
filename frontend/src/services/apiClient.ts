@@ -1,5 +1,11 @@
 // Thin fetch wrapper for calling Worker API endpoints
-import type { Timeframe, PricePoint, NewsArticle } from './types';
+import type {
+    AssetDataResponse,
+    NewsResponse,
+    Timeframe,
+    PricePoint,
+    NewsArticle,
+} from './types';
 
 // In development: use Vite proxy (/api -> localhost:8787)
 // In production (GitHub Pages): use deployed Cloudflare Worker
@@ -45,7 +51,7 @@ async function fetchApi<T>(
                 if (errorBody.message) {
                     errorMessage = errorBody.message;
                 }
-            } catch (e) {
+            } catch {
                 // Ignore JSON parse error, stick with statusText
             }
 
@@ -80,7 +86,7 @@ export const apiClient = {
                 : assetType === 'crypto'
                     ? `/crypto?symbol=${symbol}&timeframe=${timeframe}`
                     : `/gold?symbol=${symbol}&timeframe=${timeframe}`;
-        return fetchApi<any>(endpoint);
+        return fetchApi<AssetDataResponse & { isLive?: boolean }>(endpoint);
     },
 
     // Fetch single quote
@@ -100,7 +106,7 @@ export const apiClient = {
             timeframe,
             ...(symbol && { symbol }),
         });
-        return fetchApi<any>(`/news?${query}`);
+        return fetchApi<NewsResponse>(`/news?${query}`);
     },
 
     // Send analysis request to AI

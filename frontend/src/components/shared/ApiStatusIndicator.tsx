@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AlertTriangle, Info } from 'lucide-react';
 
 interface ApiUsage {
@@ -38,40 +38,36 @@ function saveUsage(usage: ApiUsage) {
     localStorage.setItem('api_usage', JSON.stringify(usage));
 }
 
+function getUsageWithResets(): ApiUsage {
+    const now = new Date();
+    const usage = getStoredUsage();
+    const lastDailyReset = new Date(usage.lastReset.daily);
+    const lastMonthlyReset = new Date(usage.lastReset.monthly);
+    let updated = false;
+    const next = { ...usage, lastReset: { ...usage.lastReset } };
+
+    if (now.getDate() !== lastDailyReset.getDate()) {
+        next.marketaux = 0;
+        next.lastReset.daily = now.toISOString();
+        updated = true;
+    }
+
+    if (now.getMonth() !== lastMonthlyReset.getMonth()) {
+        next.goldApi = 0;
+        next.lastReset.monthly = now.toISOString();
+        updated = true;
+    }
+
+    if (updated) {
+        saveUsage(next);
+    }
+    return next;
+}
+
 export function ApiStatusIndicator() {
-    const [usage, setUsage] = useState<ApiUsage>(getStoredUsage());
+    const [usage] = useState<ApiUsage>(() => getUsageWithResets());
     const [showTooltip, setShowTooltip] = useState(false);
 
-    useEffect(() => {
-        // Reset counters if needed
-        const now = new Date();
-        const lastDailyReset = new Date(usage.lastReset.daily);
-        const lastMonthlyReset = new Date(usage.lastReset.monthly);
-
-        let updated = false;
-        const newUsage = { ...usage };
-
-        // Reset daily counter (Marketaux)
-        if (now.getDate() !== lastDailyReset.getDate()) {
-            newUsage.marketaux = 0;
-            newUsage.lastReset.daily = now.toISOString();
-            updated = true;
-        }
-
-        // Reset monthly counter (Gold API)
-        if (now.getMonth() !== lastMonthlyReset.getMonth()) {
-            newUsage.goldApi = 0;
-            newUsage.lastReset.monthly = now.toISOString();
-            updated = true;
-        }
-
-        if (updated) {
-            setUsage(newUsage);
-            saveUsage(newUsage);
-        }
-    }, [usage]);
-
-    // Calculate warning levels
     const marketauxPercentage = usage.marketaux / API_LIMITS.MARKETAUX_DAILY;
     const goldApiPercentage = usage.goldApi / API_LIMITS.GOLD_API_MONTHLY;
 
@@ -84,7 +80,7 @@ export function ApiStatusIndicator() {
         goldApiPercentage >= API_LIMITS.WARNING_THRESHOLD;
 
     if (!isWarning && !isDanger) {
-        return null; // Don't show indicator if API usage is normal
+        return null;
     }
 
     const Icon = isDanger ? AlertTriangle : Info;
@@ -115,7 +111,6 @@ export function ApiStatusIndicator() {
                     </h4>
 
                     <div className="space-y-2 text-xs">
-                        {/* Marketaux */}
                         <div>
                             <div className="flex justify-between text-slate-400 mb-1">
                                 <span>Marketaux (Daily)</span>
@@ -136,7 +131,6 @@ export function ApiStatusIndicator() {
                             </div>
                         </div>
 
-                        {/* Gold API */}
                         <div>
                             <div className="flex justify-between text-slate-400 mb-1">
                                 <span>Gold API (Monthly)</span>
@@ -172,25 +166,4 @@ export function ApiStatusIndicator() {
             )}
         </div>
     );
-}
-
-// Export hook for tracking API calls
-export function useApiTracking() {
-    const trackApiCall = (service: 'twelvedata' | 'marketaux' | 'goldApi') => {
-        const usage = getStoredUsage();
-        usage[service]++;
-        saveUsage(usage);
-    };
-
-    const isApproachingLimit = (): boolean => {
-        const usage = getStoredUsage();
-        const marketauxPercentage = usage.marketaux / API_LIMITS.MARKETAUX_DAILY;
-        const goldApiPercentage = usage.goldApi / API_LIMITS.GOLD_API_MONTHLY;
-        return (
-            marketauxPercentage >= API_LIMITS.WARNING_THRESHOLD ||
-            goldApiPercentage >= API_LIMITS.WARNING_THRESHOLD
-        );
-    };
-
-    return { trackApiCall, isApproachingLimit };
 }

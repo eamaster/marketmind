@@ -15,14 +15,20 @@ TWELVE_DATA_API_KEY=your_twelve_data_api_key_here
 # Get your free API key at: https://www.coingecko.com/en/api/pricing
 COINGECKO_API_KEY=your_coingecko_api_key_here
 
-# Marketaux API (Financial news)\r
-# Get your key at: https://www.marketaux.com/\r
+# Marketaux API (Financial news)
+# Get your key at: https://www.marketaux.com/
 MARKETAUX_API_TOKEN=your_marketaux_token_here
 
 # Gold API
 # Get your key at: https://www.goldapi.io/
 GOLD_API_KEY=your_gold_api_key_here
 
-# Google Gemini API (for AI analysis)
-# Get your key at: https://makersuite.google.com/app/apikey
-GEMINI_API_KEY=your_gemini_api_key_here
+# Workers AI is provided via the native `[ai] binding = "AI"` in wrangler.toml.
+# No GEMINI_API_KEY (or other LLM API token) is required for analysis.
+# Optional overrides (also settable in wrangler.toml [vars]; validated in src/core/aiConfig.ts):
+# AI_MODEL=@cf/zai-org/glm-4.7-flash
+# AI_MAX_COMPLETION_TOKENS=2048
+# AI_TEMPERATURE=0.7
+#
+# Local AI: `wrangler dev` uses your Cloudflare account for the AI binding when authenticated.
+# Mocked unit tests do not require live inference (see `npm test` in worker/).

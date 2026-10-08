@@ -9,11 +9,23 @@ compatibility_date = "2024-11-20"
 [vars]
 # Public configuration (non-sensitive)
 WORKER_ENV = "development"
+# Workers AI settings (single operator-controlled source; validated in src/core/aiConfig.ts)
+# Defaults match AI_CONFIG_DEFAULTS if these vars are omitted.
+AI_MODEL = "@cf/zai-org/glm-4.7-flash"
+AI_MAX_COMPLETION_TOKENS = "2048"
+AI_TEMPERATURE = "0.7"
+
+# Native Workers AI binding (no API token required in Worker code)
+# `remote = true` keeps local `wrangler dev` on the account AI binding.
+[ai]
+binding = "AI"
+remote = true
 
 # KV Namespaces for caching
 [[kv_namespaces]]
 binding = "MARKETMIND_CACHE"
 id = "058d039ea4434a37930ef46065008254"
+preview_id = "bc5f8aacaae74efc9667caf22040f2c1"
 
 # Secrets (set via wrangler secret put or dashboard):
 # - FINNHUB_API_KEY          # Stock quotes and live market data
@@ -21,4 +33,7 @@ id = "058d039ea4434a37930ef46065008254"
 # - COINGECKO_API_KEY        # Crypto market data
 # - MARKETAUX_API_TOKEN      # News and sentiment analysis
 # - GOLD_API_KEY             # Precious metals pricing
-# - GEMINI_API_KEY           # AI-powered analysis
+#
+# Obsolete (Gemini migration): GEMINI_API_KEY is unused by this Worker.
+# Remove it from the Cloudflare dashboard when convenient:
+#   wrangler secret delete GEMINI_API_KEY

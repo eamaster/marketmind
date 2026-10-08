@@ -203,7 +203,7 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                                     isLoading={stockData.isLoading}
                                     error={stockData.error}
                                     onTimeframeChange={setStockTimeframe}
-                                    onSymbolChange={(newSymbol) => setStockSymbol(newSymbol as any)}
+                                    onSymbolChange={setStockSymbol}
                                     onUseForAI={handleUseForAI}
                                     supportLevel={stockData.metadata?.support}
                                     resistanceLevel={stockData.metadata?.resistance}
@@ -234,7 +234,7 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                                     isLoading={cryptoData.isLoading}
                                     error={cryptoData.error}
                                     onTimeframeChange={setcryptoTimeframe}
-                                    onCodeChange={(newCode) => setCryptoSymbol(newCode as any)}
+                                    onCodeChange={(newCode) => setCryptoSymbol(newCode as CryptoSymbol)}
                                     onUseForAI={handleUseForAI}
                                     hasOhlc={cryptoData.metadata?.hasOhlc}
                                 />
@@ -264,7 +264,9 @@ export function DashboardPage({ activeAsset = 'stock', onUseForAI, onContextUpda
                                     isLoading={metalData.isLoading}
                                     error={metalData.error}
                                     onTimeframeChange={setMetalTimeframe}
-                                    onSymbolChange={(newSymbol) => setMetalSymbol(newSymbol as any)}
+                                    onSymbolChange={(newSymbol) =>
+                                        setMetalSymbol(newSymbol === 'XAG' ? 'XAG' : 'XAU')
+                                    }
                                     onUseForAI={handleUseForAI}
                                     supportLevel={metalData.metadata?.support}
                                     resistanceLevel={metalData.metadata?.resistance}

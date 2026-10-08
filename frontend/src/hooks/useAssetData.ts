@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../services/apiClient';
-import type { PricePoint, AssetType, Timeframe } from '../services/types';
+import type { AssetDataResponse, PricePoint, AssetType, Timeframe } from '../services/types';
 
 interface UseAssetDataParams {
     assetType: AssetType;
@@ -8,9 +8,11 @@ interface UseAssetDataParams {
     timeframe: Timeframe;
 }
 
+type AssetDataApiResponse = AssetDataResponse & { isLive?: boolean };
+
 export function useAssetData({ assetType, symbol, timeframe }: UseAssetDataParams) {
     const [data, setData] = useState<PricePoint[] | null>(null);
-    const [metadata, setMetadata] = useState<any>(null); // Store API response metadata
+    const [metadata, setMetadata] = useState<AssetDataResponse['metadata'] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     const [isLive, setIsLive] = useState(false);
@@ -21,11 +23,15 @@ export function useAssetData({ assetType, symbol, timeframe }: UseAssetDataParam
 
         try {
             console.log('Fetching asset data:', { assetType, symbol, timeframe });
-            const response = await apiClient.getAssetData({ assetType, symbol, timeframe });
+            const response: AssetDataApiResponse = await apiClient.getAssetData({
+                assetType,
+                symbol,
+                timeframe,
+            });
             console.log('API response:', response);
             setData(response.data || []);
-            setMetadata(response.metadata || null); // Capture metadata
-            setIsLive(response.isLive || false); // Store isLive flag from API
+            setMetadata(response.metadata || null);
+            setIsLive(response.isLive || false);
         } catch (err) {
             console.error('Fetch error:', err);
             setError(err instanceof Error ? err : new Error('Failed to fetch asset data'));

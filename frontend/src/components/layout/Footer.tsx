@@ -23,7 +23,7 @@ export function Footer() {
                         <span className="font-medium text-slate-700 dark:text-slate-300">CoinGecko</span>,{' '}
                         <span className="font-medium text-slate-700 dark:text-slate-300">GoldAPI</span>,{' '}
                         <span className="font-medium text-slate-700 dark:text-slate-300">Marketaux</span> &{' '}
-                        <span className="font-medium text-blue-600 dark:text-blue-400">Google Gemini</span>
+                        <span className="font-medium text-blue-600 dark:text-blue-400">Cloudflare Workers AI</span>
                     </p>
                 </div>
             </div>
