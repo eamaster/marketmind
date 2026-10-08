@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
     AiProviderError,
     analyzeMarketContext,
+    extractWorkersAiErrorCode,
     normalizeWorkersAiResponse,
 } from './workersAi';
 import type { Env } from '../core/types';
@@ -45,11 +46,22 @@ describe('normalizeWorkersAiResponse', () => {
         expect(text).toBe('Trend is upward.');
     });
 
-    it('rejects missing/empty assistant content', () => {
+    it('rejects choices: [null], empty choices, and missing message', () => {
+        expect(() => normalizeWorkersAiResponse({ choices: [null] })).toThrow(/choices\[0\]/);
+        expect(() => normalizeWorkersAiResponse({ choices: [] })).toThrow(/no choices/);
+        expect(() => normalizeWorkersAiResponse({ choices: [{ message: null }] })).toThrow(
+            /missing message/
+        );
+        expect(() => normalizeWorkersAiResponse({ choices: [{}] })).toThrow(/missing message/);
+    });
+
+    it('rejects missing/empty/non-string assistant content', () => {
         expect(() =>
             normalizeWorkersAiResponse({ choices: [{ message: { content: '' } }] })
         ).toThrow(AiProviderError);
-        expect(() => normalizeWorkersAiResponse({ choices: [{}] })).toThrow(AiProviderError);
+        expect(() =>
+            normalizeWorkersAiResponse({ choices: [{ message: { content: 42 as unknown as string } }] })
+        ).toThrow(AiProviderError);
     });
 
     it('rejects malformed envelopes (no Llama response / no Gemini candidates)', () => {
@@ -63,7 +75,7 @@ describe('normalizeWorkersAiResponse', () => {
         ).toThrow(/missing choices/);
     });
 
-    it('rejects tool-call-only output', () => {
+    it('rejects tool-call-only and tool_calls finish reasons', () => {
         expect(() =>
             normalizeWorkersAiResponse({
                 choices: [
@@ -77,7 +89,7 @@ describe('normalizeWorkersAiResponse', () => {
                     },
                 ],
             })
-        ).toThrow(/tool calls/);
+        ).toThrow(/tool/);
     });
 
     it('rejects truncated output', () => {
@@ -93,7 +105,7 @@ describe('normalizeWorkersAiResponse', () => {
         ).toThrow(/truncated/);
     });
 
-    it('does not return reasoning_content as the analysis', () => {
+    it('does not return reasoning fields as the analysis', () => {
         const text = normalizeWorkersAiResponse({
             choices: [
                 {
@@ -102,12 +114,42 @@ describe('normalizeWorkersAiResponse', () => {
                         role: 'assistant',
                         content: 'User-facing answer',
                         reasoning_content: 'secret chain of thought',
+                        reasoning: 'more secret',
                     },
                 },
             ],
         });
         expect(text).toBe('User-facing answer');
-        expect(text).not.toContain('secret chain');
+        expect(text).not.toContain('secret');
+    });
+});
+
+describe('error classification', () => {
+    it('extracts documented Workers AI codes', () => {
+        expect(extractWorkersAiErrorCode({ code: 3036 })).toBe(3036);
+        expect(extractWorkersAiErrorCode(new Error('Out of capacity 3040'))).toBe(3040);
+        expect(extractWorkersAiErrorCode({ errors: [{ code: 3007 }] })).toBe(3007);
+    });
+
+    it('maps quota / capacity / throttle distinctly without raw leakage', async () => {
+        const quotaRun = vi.fn().mockRejectedValue(new Error('Account limited 3036'));
+        await expect(
+            analyzeMarketContext(baseInput, 'prompt', { AI: { run: quotaRun } } as unknown as Env)
+        ).rejects.toMatchObject({ category: 'quota', providerCode: 3036, statusHint: 429 });
+
+        const capacityRun = vi.fn().mockRejectedValue(new Error('3040 Capacity temporarily exceeded'));
+        await expect(
+            analyzeMarketContext(baseInput, 'prompt', {
+                AI: { run: capacityRun },
+            } as unknown as Env)
+        ).rejects.toMatchObject({ category: 'capacity', providerCode: 3040 });
+
+        const throttleRun = vi.fn().mockRejectedValue(new Error('HTTP 429 Too Many Requests'));
+        const throttleErr = await analyzeMarketContext(baseInput, 'prompt', {
+            AI: { run: throttleRun },
+        } as unknown as Env).catch(e => e);
+        expect(throttleErr.category).toBe('throttle');
+        expect(throttleErr.message).not.toMatch(/stack|at Object/);
     });
 });
 
@@ -116,17 +158,6 @@ describe('analyzeMarketContext', () => {
         await expect(
             analyzeMarketContext(baseInput, 'prompt', {} as Env)
         ).rejects.toThrow(/binding "AI" is missing/);
-    });
-
-    it('maps quota failures without inventing analysis text', async () => {
-        const run = vi.fn().mockRejectedValue(new Error('error code 3036 daily free allocation'));
-        const env = { AI: { run } } as unknown as Env;
-
-        await expect(analyzeMarketContext(baseInput, 'prompt', env)).rejects.toMatchObject({
-            category: 'quota',
-            statusHint: 429,
-        });
-        expect(run).toHaveBeenCalledTimes(1);
     });
 
     it('returns normalized assistant text from a mocked binding', async () => {

@@ -1,42 +1,13 @@
-interface ApiUsage {
-    twelvedata: number;
-    marketaux: number;
-    goldApi: number;
-    lastReset: {
-        daily: string;
-        monthly: string;
-    };
-}
-
-const API_LIMITS = {
-    MARKETAUX_DAILY: 100,
-    GOLD_API_MONTHLY: 1000,
-    WARNING_THRESHOLD: 0.8,
-};
-
-function getStoredUsage(): ApiUsage {
-    const stored = localStorage.getItem('api_usage');
-    if (stored) {
-        return JSON.parse(stored);
-    }
-    return {
-        twelvedata: 0,
-        marketaux: 0,
-        goldApi: 0,
-        lastReset: {
-            daily: new Date().toISOString(),
-            monthly: new Date().toISOString(),
-        },
-    };
-}
-
-function saveUsage(usage: ApiUsage) {
-    localStorage.setItem('api_usage', JSON.stringify(usage));
-}
+import {
+    API_LIMITS,
+    getStoredUsage,
+    getUsageWithResets,
+    saveUsage,
+} from '../services/apiUsage';
 
 export function useApiTracking() {
     const trackApiCall = (service: 'twelvedata' | 'marketaux' | 'goldApi') => {
-        const usage = getStoredUsage();
+        const usage = getUsageWithResets();
         usage[service]++;
         saveUsage(usage);
     };

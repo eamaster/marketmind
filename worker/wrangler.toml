@@ -10,7 +10,7 @@ compatibility_date = "2024-11-20"
 # Public configuration (non-sensitive)
 WORKER_ENV = "development"
 # Workers AI settings (single operator-controlled source; validated in src/core/aiConfig.ts)
-# Defaults match AI_CONFIG_DEFAULTS if these vars are omitted.
+# Only the verified GLM adapter model is accepted: @cf/zai-org/glm-4.7-flash
 AI_MODEL = "@cf/zai-org/glm-4.7-flash"
 AI_MAX_COMPLETION_TOKENS = "2048"
 AI_TEMPERATURE = "0.7"

@@ -15,18 +15,27 @@ export type AiErrorCategory =
     | 'config'
     | 'provider'
     | 'quota'
+    | 'throttle'
+    | 'capacity'
     | 'invalid_output'
     | 'timeout';
 
 export class AiProviderError extends Error {
     readonly category: AiErrorCategory;
     readonly statusHint: number;
+    readonly providerCode?: number;
 
-    constructor(message: string, category: AiErrorCategory, statusHint = 502) {
+    constructor(
+        message: string,
+        category: AiErrorCategory,
+        statusHint = 502,
+        providerCode?: number
+    ) {
         super(message);
         this.name = 'AiProviderError';
         this.category = category;
         this.statusHint = statusHint;
+        this.providerCode = providerCode;
     }
 }
 
@@ -39,14 +48,15 @@ interface ChatCompletionChoice {
         content?: string | null;
         tool_calls?: unknown[];
         reasoning_content?: string | null;
-    };
+        reasoning?: string | null;
+    } | null;
 }
 
 interface ChatCompletionResponse {
     id?: string;
     object?: string;
     model?: string;
-    choices?: ChatCompletionChoice[];
+    choices?: Array<ChatCompletionChoice | null>;
     usage?: {
         prompt_tokens?: number;
         completion_tokens?: number;
@@ -66,7 +76,7 @@ export function normalizeWorkersAiResponse(raw: unknown): string {
         );
     }
 
-    const data = raw as ChatCompletionResponse & { response?: unknown; result?: unknown };
+    const data = raw as ChatCompletionResponse;
 
     if (!Array.isArray(data.choices)) {
         throw new AiProviderError(
@@ -80,9 +90,15 @@ export function normalizeWorkersAiResponse(raw: unknown): string {
     }
 
     const choice = data.choices[0];
-    const message = choice.message;
+    if (choice == null || typeof choice !== 'object') {
+        throw new AiProviderError(
+            'Workers AI choices[0] is missing or not an object',
+            'invalid_output'
+        );
+    }
 
-    if (!message || typeof message !== 'object') {
+    const message = choice.message;
+    if (message == null || typeof message !== 'object') {
         throw new AiProviderError(
             'Workers AI choice is missing message',
             'invalid_output'
@@ -99,6 +115,13 @@ export function normalizeWorkersAiResponse(raw: unknown): string {
         );
     }
 
+    if (choice.finish_reason === 'tool_calls') {
+        throw new AiProviderError(
+            'Workers AI finished with tool_calls; tools are not enabled for this endpoint',
+            'invalid_output'
+        );
+    }
+
     if (typeof content !== 'string' || content.trim().length === 0) {
         throw new AiProviderError(
             'Workers AI returned empty assistant content',
@@ -108,60 +131,117 @@ export function normalizeWorkersAiResponse(raw: unknown): string {
 
     if (choice.finish_reason === 'length') {
         throw new AiProviderError(
-            'Workers AI output was truncated (finish_reason=length). Try a shorter question or raise AI_MAX_COMPLETION_TOKENS.',
+            'Workers AI output was truncated. Try a shorter question or raise AI_MAX_COMPLETION_TOKENS.',
             'invalid_output'
         );
     }
 
+    // Only return final assistant content — never reasoning fields.
     return content.trim();
 }
 
-function classifyProviderFailure(error: unknown): AiProviderError {
-    if (error instanceof AiProviderError || error instanceof AiConfigError) {
-        if (error instanceof AiConfigError) {
-            return new AiProviderError(error.message, 'config', 500);
+/** Extract documented Workers AI internal error codes from thrown errors. */
+export function extractWorkersAiErrorCode(error: unknown): number | undefined {
+    if (error && typeof error === 'object') {
+        const record = error as Record<string, unknown>;
+        for (const key of ['code', 'internalCode', 'errorCode']) {
+            const value = record[key];
+            if (typeof value === 'number' && Number.isFinite(value)) return value;
+            if (typeof value === 'string' && /^\d+$/.test(value)) return Number(value);
         }
-        return error;
+        if (Array.isArray(record.errors)) {
+            for (const item of record.errors) {
+                if (item && typeof item === 'object') {
+                    const code = (item as Record<string, unknown>).code;
+                    if (typeof code === 'number') return code;
+                    if (typeof code === 'string' && /^\d+$/.test(code)) return Number(code);
+                }
+            }
+        }
     }
 
     const message = error instanceof Error ? error.message : String(error);
+    const match = message.match(/\b(300[3678]|3023|3036|3039|304[012]|500[457]|501[689]|5035)\b/);
+    return match ? Number(match[1]) : undefined;
+}
+
+function classifyProviderFailure(error: unknown): AiProviderError {
+    if (error instanceof AiProviderError) {
+        return error;
+    }
+    if (error instanceof AiConfigError) {
+        return new AiProviderError(error.message, 'config', 500);
+    }
+
+    const code = extractWorkersAiErrorCode(error);
+    const message = error instanceof Error ? error.message : String(error);
     const lower = message.toLowerCase();
 
-    if (
-        lower.includes('3036') ||
-        lower.includes('10,000 neurons') ||
-        lower.includes('daily free allocation') ||
-        lower.includes('quota') ||
-        lower.includes('rate limit') ||
-        lower.includes('429')
-    ) {
+    // Documented Workers AI codes:
+    // 3036 Account limited (daily free neurons) → 429
+    // 3040 Out of capacity → 429
+    // 3007/3008 Timeout/Aborted → 408
+    // 5035 Model requires Workers Paid → 403
+    if (code === 3036 || lower.includes('daily free allocation') || lower.includes('10,000 neurons')) {
         return new AiProviderError(
-            'Workers AI quota or rate limit exceeded. Shared daily free Neurons may be exhausted; try again later or upgrade the Workers plan.',
+            'Workers AI daily free Neuron allocation is exhausted. Try again after the daily reset (00:00 UTC) or upgrade the Workers plan.',
             'quota',
-            429
+            429,
+            3036
         );
     }
 
-    if (lower.includes('3040') || lower.includes('out of capacity') || lower.includes('capacity')) {
+    if (code === 3040 || lower.includes('out of capacity') || lower.includes('capacity temporarily exceeded')) {
         return new AiProviderError(
             'Workers AI is temporarily out of capacity. Please try again shortly.',
-            'provider',
-            503
+            'capacity',
+            503,
+            3040
         );
     }
 
-    if (lower.includes('timeout') || lower.includes('timed out')) {
+    if (code === 3007 || code === 3008 || lower.includes('timed out') || lower.includes('timeout') || lower.includes('aborted')) {
         return new AiProviderError(
-            'Workers AI request timed out',
+            'Workers AI request timed out. Please try again.',
             'timeout',
-            504
+            504,
+            code
+        );
+    }
+
+    if (code === 5035 || lower.includes('requires a workers paid plan')) {
+        return new AiProviderError(
+            'Configured Workers AI model is not available on the current plan.',
+            'config',
+            500,
+            5035
+        );
+    }
+
+    if (code === 5007 || code === 3042 || lower.includes('no such model') || lower.includes('model name is invalid')) {
+        return new AiProviderError(
+            'Configured Workers AI model is invalid or unavailable.',
+            'config',
+            500,
+            code
+        );
+    }
+
+    // Generic HTTP 429 without account-allocation markers → request throttling
+    if (/\b429\b/.test(message) || lower.includes('rate limit') || lower.includes('too many requests')) {
+        return new AiProviderError(
+            'Workers AI request was throttled. Please try again shortly.',
+            'throttle',
+            429,
+            code
         );
     }
 
     return new AiProviderError(
-        `Workers AI request failed: ${message}`,
+        'Workers AI request failed. Please try again later.',
         'provider',
-        502
+        502,
+        code
     );
 }
 
@@ -184,8 +264,6 @@ export async function analyzeMarketContext(
     );
 
     try {
-        // Model id is validated in resolveAiConfig; cast needed because generated Ai
-        // typings enumerate catalog models rather than accepting arbitrary @cf/ strings.
         const raw = await ai.run(config.model as Parameters<Ai['run']>[0], {
             messages: [
                 { role: 'system', content: ANALYST_SYSTEM_PROMPT },
@@ -193,9 +271,8 @@ export async function analyzeMarketContext(
             ],
             max_completion_tokens: config.maxCompletionTokens,
             temperature: config.temperature,
-            // Model supports reasoning; keep it off so analysis text stays user-facing.
             chat_template_kwargs: {
-                enable_thinking: false,
+                enable_thinking: config.enableThinking,
             },
         });
 
@@ -216,7 +293,9 @@ export async function analyzeMarketContext(
     } catch (error) {
         const mapped = classifyProviderFailure(error);
         console.error(
-            `[WorkersAI] error category=${mapped.category} durationMs=${Date.now() - started} message=${mapped.message}`
+            `[WorkersAI] error category=${mapped.category}` +
+                (mapped.providerCode != null ? ` code=${mapped.providerCode}` : '') +
+                ` durationMs=${Date.now() - started}`
         );
         throw mapped;
     }

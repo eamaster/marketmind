@@ -1,12 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import {
     buildAiCacheKey,
-    hashMarketContext,
-    hashQuestion,
+    buildInferenceInputHash,
     handleAiAnalyzeRequest,
 } from './aiAnalyze';
 import * as workersAi from '../integrations/workersAi';
-import { AI_CONFIG_DEFAULTS } from '../core/aiConfig';
+import { AI_CONFIG_DEFAULTS, resolveAiConfig } from '../core/aiConfig';
+import { ANALYST_SYSTEM_PROMPT, buildPrompt } from '../core/promptBuilder';
 import type { Env } from '../core/types';
 
 const cors = {
@@ -21,7 +21,8 @@ const validBody = {
     timeframe: '7D',
     chartData: [
         { timestamp: '2026-01-01T00:00:00.000Z', close: 100 },
-        { timestamp: '2026-01-02T00:00:00.000Z', close: 105 },
+        { timestamp: '2026-01-02T00:00:00.000Z', close: 101 },
+        { timestamp: '2026-01-03T00:00:00.000Z', close: 105 },
     ],
     news: [
         {
@@ -31,6 +32,7 @@ const validBody = {
             snippet: 's',
             publishedAt: '2026-01-02T00:00:00.000Z',
             source: 'Wire',
+            sentimentScore: 0.2,
         },
     ],
     question: 'What is the trend?',
@@ -44,41 +46,98 @@ function makeRequest(body: unknown, method = 'POST'): Request {
     });
 }
 
-describe('AI cache key helpers', () => {
-    it('changes when model or prompt version changes', () => {
-        const base = {
-            cacheNamespace: AI_CONFIG_DEFAULTS.cacheNamespace,
-            model: AI_CONFIG_DEFAULTS.model,
-            promptVersion: AI_CONFIG_DEFAULTS.promptVersion,
-            assetType: 'stock',
-            symbol: 'AAPL',
-            timeframe: '7D',
-            hourBucket: 1,
-            questionHash: 'abc',
-            contextHash: 'def',
+function promptFor(body: typeof validBody) {
+    return buildPrompt({
+        assetType: body.assetType as 'stock',
+        symbol: body.symbol,
+        timeframe: body.timeframe as '7D',
+        chartData: body.chartData,
+        news: body.news,
+        question: body.question,
+    });
+}
+
+describe('inference cache identity', () => {
+    it('changes when first close changes', async () => {
+        const config = resolveAiConfig({});
+        const a = await buildInferenceInputHash(config, ANALYST_SYSTEM_PROMPT, promptFor(validBody));
+        const altered = {
+            ...validBody,
+            chartData: [
+                { timestamp: '2026-01-01T00:00:00.000Z', close: 90 },
+                validBody.chartData[1],
+                validBody.chartData[2],
+            ],
         };
-        const a = buildAiCacheKey(base);
-        const b = buildAiCacheKey({ ...base, model: '@cf/other/model' });
-        const c = buildAiCacheKey({ ...base, promptVersion: 'wai-v2' });
+        const b = await buildInferenceInputHash(config, ANALYST_SYSTEM_PROMPT, promptFor(altered));
         expect(a).not.toBe(b);
-        expect(a).not.toBe(c);
-        expect(a.startsWith('ai:wai:v1:')).toBe(true);
-        expect(a.includes('ai:')).toBe(true);
-        // Old Gemini-era prefix alone is not the full key namespace
-        expect(a.startsWith('ai:') && !a.startsWith('ai:wai:')).toBe(false);
     });
 
-    it('hashes questions and market context stably', async () => {
-        const q1 = await hashQuestion('  Hello World  ');
-        const q2 = await hashQuestion('hello world');
-        expect(q1).toBe(q2);
+    it('changes when an interior close changes the prompt', async () => {
+        const config = resolveAiConfig({});
+        const a = await buildInferenceInputHash(config, ANALYST_SYSTEM_PROMPT, promptFor(validBody));
+        const altered = {
+            ...validBody,
+            chartData: [
+                validBody.chartData[0],
+                { timestamp: '2026-01-02T00:00:00.000Z', close: 150 },
+                validBody.chartData[2],
+            ],
+        };
+        // Interior close affects high/low/volatility/mean in the prompt summary.
+        expect(promptFor(altered)).not.toBe(promptFor(validBody));
+        const b = await buildInferenceInputHash(config, ANALYST_SYSTEM_PROMPT, promptFor(altered));
+        expect(a).not.toBe(b);
+    });
 
-        const c1 = await hashMarketContext(validBody.chartData, validBody.news as any);
-        const c2 = await hashMarketContext(
-            [...validBody.chartData, { timestamp: '2026-01-03T00:00:00.000Z', close: 200 }],
-            validBody.news as any
-        );
-        expect(c1).not.toBe(c2);
+    it('changes when article title/source/date/sentiment change with same id', async () => {
+        const config = resolveAiConfig({});
+        const a = await buildInferenceInputHash(config, ANALYST_SYSTEM_PROMPT, promptFor(validBody));
+        const altered = {
+            ...validBody,
+            news: [
+                {
+                    ...validBody.news[0],
+                    title: 'Different title',
+                    source: 'OtherWire',
+                    publishedAt: '2026-01-03T00:00:00.000Z',
+                    sentimentScore: -0.5,
+                },
+            ],
+        };
+        const b = await buildInferenceInputHash(config, ANALYST_SYSTEM_PROMPT, promptFor(altered));
+        expect(a).not.toBe(b);
+    });
+
+    it('changes when generation settings change', async () => {
+        const base = resolveAiConfig({});
+        const tuned = resolveAiConfig({ AI_TEMPERATURE: '0.1', AI_MAX_COMPLETION_TOKENS: '512' });
+        const prompt = promptFor(validBody);
+        const a = await buildInferenceInputHash(base, ANALYST_SYSTEM_PROMPT, prompt);
+        const b = await buildInferenceInputHash(tuned, ANALYST_SYSTEM_PROMPT, prompt);
+        expect(a).not.toBe(b);
+    });
+
+    it('keeps case-distinct questions distinct', async () => {
+        const config = resolveAiConfig({});
+        const lower = { ...validBody, question: 'trend?' };
+        const upper = { ...validBody, question: 'Trend?' };
+        const a = await buildInferenceInputHash(config, ANALYST_SYSTEM_PROMPT, promptFor(lower));
+        const b = await buildInferenceInputHash(config, ANALYST_SYSTEM_PROMPT, promptFor(upper));
+        expect(a).not.toBe(b);
+    });
+
+    it('produces identical hashes for identical effective inputs', async () => {
+        const config = resolveAiConfig({});
+        const prompt = promptFor(validBody);
+        const a = await buildInferenceInputHash(config, ANALYST_SYSTEM_PROMPT, prompt);
+        const b = await buildInferenceInputHash(config, ANALYST_SYSTEM_PROMPT, prompt);
+        expect(a).toBe(b);
+        expect(buildAiCacheKey({
+            cacheNamespace: AI_CONFIG_DEFAULTS.cacheNamespace,
+            inputHash: a,
+            hourBucket: 1,
+        }).startsWith('ai:wai:v2:')).toBe(true);
     });
 });
 
@@ -92,15 +151,27 @@ describe('handleAiAnalyzeRequest', () => {
         expect(res.status).toBe(405);
     });
 
-    it('validates required fields', async () => {
-        const res = await handleAiAnalyzeRequest(
+    it('returns 400 for malformed JSON and invalid payloads', async () => {
+        const badJson = new Request('https://example.com/api/ai/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{not-json',
+        });
+        const resJson = await handleAiAnalyzeRequest(
+            badJson,
+            { AI: { run: vi.fn() } as unknown as Ai },
+            cors
+        );
+        expect(resJson.status).toBe(400);
+
+        const resFields = await handleAiAnalyzeRequest(
             makeRequest({ assetType: 'stock', question: 'x' }),
             { AI: { run: vi.fn() } as unknown as Ai },
             cors
         );
-        expect(res.status).toBe(400);
-        const body = await res.json();
-        expect(body.error).toBe('Missing required fields');
+        expect(resFields.status).toBe(400);
+        const body = (await resFields.json()) as { error: string };
+        expect(body.error).toBe('Invalid request');
     });
 
     it('returns { answer } and sets CORS / rate-limit headers', async () => {
@@ -117,14 +188,19 @@ describe('handleAiAnalyzeRequest', () => {
 
     it('maps provider quota errors without Gemini fallback', async () => {
         vi.spyOn(workersAi, 'analyzeMarketContext').mockRejectedValue(
-            new workersAi.AiProviderError('quota exhausted', 'quota', 429)
+            new workersAi.AiProviderError('quota exhausted', 'quota', 429, 3036)
         );
         const env = { AI: { run: vi.fn() } as unknown as Ai } as Env;
         const res = await handleAiAnalyzeRequest(makeRequest(validBody), env, cors);
         expect(res.status).toBe(429);
-        const body = await res.json();
+        const body = (await res.json()) as {
+            error: string;
+            category: string;
+            providerCode?: number;
+        };
         expect(body.error).toBe('Failed to analyze market data');
         expect(body.category).toBe('quota');
+        expect(body.providerCode).toBe(3036);
         expect(JSON.stringify(body)).not.toMatch(/Gemini|GEMINI/i);
     });
 
@@ -141,22 +217,66 @@ describe('handleAiAnalyzeRequest', () => {
 
         const res = await handleAiAnalyzeRequest(makeRequest(validBody), env, cors);
         expect(res.status).toBe(502);
-        // Rate-limit counter may write to KV; analysis answers must not.
         const aiPuts = put.mock.calls.filter(
-            (call: unknown[]) => typeof call[0] === 'string' && call[0].startsWith('ai:wai:')
+            (call: unknown[]) => typeof call[0] === 'string' && String(call[0]).startsWith('ai:wai:')
         );
         expect(aiPuts).toHaveLength(0);
     });
 
+    it('still returns a successful answer if cache write fails', async () => {
+        const put = vi.fn(async (key: string, value: string) => {
+            if (String(key).startsWith('ai:wai:')) {
+                throw new Error('kv down');
+            }
+            // Rate-limit writes succeed
+            void value;
+        });
+        const get = vi.fn().mockResolvedValue(null);
+        vi.spyOn(workersAi, 'analyzeMarketContext').mockResolvedValue('ok answer');
+        const env = {
+            AI: { run: vi.fn() } as unknown as Ai,
+            MARKETMIND_CACHE: { get, put, delete: vi.fn(), list: vi.fn() },
+        } as unknown as Env;
+
+        const res = await handleAiAnalyzeRequest(makeRequest(validBody), env, cors);
+        expect(res.status).toBe(200);
+        await expect(res.json()).resolves.toEqual({ answer: 'ok answer' });
+    });
+
+    it('serves a cache hit for identical effective inputs', async () => {
+        const stored: Record<string, string> = {};
+        const put = vi.fn(async (key: string, value: string) => {
+            stored[key] = value;
+        });
+        const get = vi.fn(async (key: string, type?: string) => {
+            const raw = stored[key];
+            if (raw == null) return null;
+            return type === 'json' ? JSON.parse(raw) : raw;
+        });
+        vi.spyOn(workersAi, 'analyzeMarketContext').mockResolvedValue('cached-or-fresh');
+        const env = {
+            AI: { run: vi.fn() } as unknown as Ai,
+            MARKETMIND_CACHE: { get, put, delete: vi.fn(), list: vi.fn() },
+        } as unknown as Env;
+
+        const first = await handleAiAnalyzeRequest(makeRequest(validBody), env, cors);
+        expect(first.headers.get('X-Cache-Status')).toBe('MISS');
+        const second = await handleAiAnalyzeRequest(makeRequest(validBody), env, cors);
+        expect(second.headers.get('X-Cache-Status')).toBe('HIT');
+        expect(workersAi.analyzeMarketContext).toHaveBeenCalledTimes(1);
+    });
+
     it('supports crypto and metal payloads', async () => {
-        const spy = vi
-            .spyOn(workersAi, 'analyzeMarketContext')
-            .mockResolvedValue('ok');
+        const spy = vi.spyOn(workersAi, 'analyzeMarketContext').mockResolvedValue('ok');
         const env = { AI: { run: vi.fn() } as unknown as Ai } as Env;
 
         for (const assetType of ['crypto', 'metal'] as const) {
             const res = await handleAiAnalyzeRequest(
-                makeRequest({ ...validBody, assetType, symbol: assetType === 'crypto' ? 'BTC' : 'XAU' }),
+                makeRequest({
+                    ...validBody,
+                    assetType,
+                    symbol: assetType === 'crypto' ? 'BTC' : 'XAU',
+                }),
                 env,
                 cors
             );

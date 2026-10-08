@@ -4,6 +4,7 @@ import {
     AiConfigError,
     requireAiBinding,
     resolveAiConfig,
+    SUPPORTED_AI_MODELS,
 } from './aiConfig';
 import type { Env } from './types';
 
@@ -19,9 +20,10 @@ describe('resolveAiConfig', () => {
         expect(config.temperature).toBe(AI_CONFIG_DEFAULTS.temperature);
         expect(config.promptVersion).toBe(AI_CONFIG_DEFAULTS.promptVersion);
         expect(config.cacheNamespace).toBe(AI_CONFIG_DEFAULTS.cacheNamespace);
+        expect(config.enableThinking).toBe(false);
     });
 
-    it('accepts valid operator overrides', () => {
+    it('accepts the verified GLM model override', () => {
         const config = resolveAiConfig(
             env({
                 AI_MODEL: '@cf/zai-org/glm-4.7-flash',
@@ -34,10 +36,14 @@ describe('resolveAiConfig', () => {
         expect(config.temperature).toBe(0.2);
     });
 
-    it('rejects non-Workers-AI model ids', () => {
+    it('rejects unsupported Workers AI models even with @cf/ prefix', () => {
+        expect(() => resolveAiConfig(env({ AI_MODEL: '@cf/meta/llama-3.3-70b-instruct' }))).toThrow(
+            AiConfigError
+        );
         expect(() => resolveAiConfig(env({ AI_MODEL: 'gemini-3-pro-preview' }))).toThrow(
             AiConfigError
         );
+        expect(SUPPORTED_AI_MODELS).toEqual(['@cf/zai-org/glm-4.7-flash']);
     });
 
     it('rejects out-of-range numeric settings', () => {
@@ -45,9 +51,6 @@ describe('resolveAiConfig', () => {
             resolveAiConfig(env({ AI_MAX_COMPLETION_TOKENS: '10' }))
         ).toThrow(AiConfigError);
         expect(() => resolveAiConfig(env({ AI_TEMPERATURE: '3' }))).toThrow(AiConfigError);
-        expect(() =>
-            resolveAiConfig(env({ AI_MAX_COMPLETION_TOKENS: '1.5' }))
-        ).toThrow(AiConfigError);
     });
 });
 

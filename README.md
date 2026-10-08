@@ -318,7 +318,8 @@ MarketMind uses a hybrid approach to provide the best free-tier experience:
 - **Default model**: `@cf/zai-org/glm-4.7-flash` (operator-configurable; not client-selectable)
 - **Free allocation**: 10,000 Neurons/day (account-wide, not unlimited)
 - **Documentation:** [Workers AI](https://developers.cloudflare.com/workers-ai/) / [GLM-4.7-Flash](https://developers.cloudflare.com/workers-ai/models/glm-4.7-flash/)
-- **Caching**: Successful answers cached in KV for 30 minutes (namespace `ai:wai:v1`, includes model + prompt version + market-context fingerprint)
+- **Caching**: Successful answers cached in KV for 30 minutes (namespace `ai:wai:v2`; key hashes system+user prompt + verified model + generation settings + prompt version)
+- **Allowed model**: `@cf/zai-org/glm-4.7-flash` only (validated in `worker/src/core/aiConfig.ts`)
 
 ---
 

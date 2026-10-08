@@ -88,13 +88,14 @@ function summarizeChartData(data: PricePoint[]): string {
     const low = Math.min(...prices);
 
     const change = last.close - first.close;
-    const changePercent = ((change / first.close) * 100).toFixed(2);
+    const changePercent =
+        first.close > 0 ? ((change / first.close) * 100).toFixed(2) : 'n/a';
     const trend = change > 0 ? 'upward' : change < 0 ? 'downward' : 'flat';
 
     const mean = prices.reduce((sum, p) => sum + p, 0) / prices.length;
     const variance = prices.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) / prices.length;
     const stdDev = Math.sqrt(variance);
-    const volatility = ((stdDev / mean) * 100).toFixed(2);
+    const volatility = mean > 0 ? ((stdDev / mean) * 100).toFixed(2) : 'n/a';
 
     return `- First timestamp: ${first.timestamp}
 - Last timestamp: ${last.timestamp}

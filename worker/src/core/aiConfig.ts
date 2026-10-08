@@ -1,17 +1,29 @@
 import type { Env } from './types';
 
 /**
+ * Models this adapter is tested against (GLM chat-completion envelope + params).
+ * Do not expand without updating normalization, tests, and docs.
+ */
+export const SUPPORTED_AI_MODELS = ['@cf/zai-org/glm-4.7-flash'] as const;
+export type SupportedAiModel = (typeof SUPPORTED_AI_MODELS)[number];
+
+/**
  * Single authoritative defaults for Workers AI market analysis.
  * Optional env vars (wrangler [vars]) may override these after validation.
  */
 export const AI_CONFIG_DEFAULTS = {
-    model: '@cf/zai-org/glm-4.7-flash',
+    model: '@cf/zai-org/glm-4.7-flash' satisfies SupportedAiModel,
     maxCompletionTokens: 2048,
     temperature: 0.7,
-    /** Bump when prompt/system instructions change in a way that must invalidate KV answers. */
-    promptVersion: 'wai-v1',
-    /** AI response cache namespace; change invalidates Gemini-era `ai:` keys. */
-    cacheNamespace: 'ai:wai:v1',
+    /** Bump when prompt/system instructions or cache identity inputs change. */
+    promptVersion: 'wai-v2',
+    /**
+     * AI response cache namespace.
+     * v2: fingerprint is hash of system+user prompt + generation settings (not partial market fields).
+     */
+    cacheNamespace: 'ai:wai:v2',
+    /** Thinking/reasoning disabled for user-facing analysis. */
+    enableThinking: false,
 } as const;
 
 const MIN_MAX_COMPLETION_TOKENS = 64;
@@ -20,11 +32,12 @@ const MIN_TEMPERATURE = 0;
 const MAX_TEMPERATURE = 2;
 
 export interface ResolvedAiConfig {
-    model: string;
+    model: SupportedAiModel;
     maxCompletionTokens: number;
     temperature: number;
     promptVersion: string;
     cacheNamespace: string;
+    enableThinking: boolean;
 }
 
 export class AiConfigError extends Error {
@@ -54,14 +67,19 @@ function parseOptionalFloat(raw: string | undefined, label: string): number | un
     return value;
 }
 
+function isSupportedModel(model: string): model is SupportedAiModel {
+    return (SUPPORTED_AI_MODELS as readonly string[]).includes(model);
+}
+
 /**
  * Resolve and validate AI settings from env vars + defaults.
  */
 export function resolveAiConfig(env: Env): ResolvedAiConfig {
     const model = (env.AI_MODEL?.trim() || AI_CONFIG_DEFAULTS.model).trim();
-    if (!model.startsWith('@cf/')) {
+    if (!isSupportedModel(model)) {
         throw new AiConfigError(
-            `AI_MODEL must be a Workers AI model id starting with "@cf/" (got "${model}")`
+            `AI_MODEL must be one of: ${SUPPORTED_AI_MODELS.join(', ')} (got "${model}"). ` +
+                'This adapter only supports the verified GLM chat-completion integration.'
         );
     }
 
@@ -94,6 +112,7 @@ export function resolveAiConfig(env: Env): ResolvedAiConfig {
         temperature,
         promptVersion: AI_CONFIG_DEFAULTS.promptVersion,
         cacheNamespace: AI_CONFIG_DEFAULTS.cacheNamespace,
+        enableThinking: AI_CONFIG_DEFAULTS.enableThinking,
     };
 }
 

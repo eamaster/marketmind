@@ -1,98 +1,84 @@
-import type { Env, AiAnalyzeRequest, AiAnalyzeResponse, PricePoint, NewsArticle } from '../core/types';
-import { buildPrompt } from '../core/promptBuilder';
+import type { Env, AiAnalyzeResponse } from '../core/types';
+import { ANALYST_SYSTEM_PROMPT, buildPrompt } from '../core/promptBuilder';
 import { analyzeMarketContext, AiProviderError } from '../integrations/workersAi';
-import { AiConfigError, resolveAiConfig } from '../core/aiConfig';
+import { AiConfigError, resolveAiConfig, type ResolvedAiConfig } from '../core/aiConfig';
+import { AiRequestValidationError, validateAiAnalyzeRequest } from '../core/requestValidation';
 import { KVCache } from '../core/cache';
 
-// Rate limiting: 10 requests per hour per IP
-async function checkRateLimit(clientId: string, env: Env): Promise<{ allowed: boolean; remaining: number }> {
+const AI_CACHE_TTL_SECONDS = 1800; // 30 minutes
+
+async function checkRateLimit(
+    clientId: string,
+    env: Env
+): Promise<{ allowed: boolean; remaining: number }> {
     if (!env.MARKETMIND_CACHE) {
-        return { allowed: true, remaining: 999 }; // No KV = no limiting (dev mode)
+        return { allowed: true, remaining: 999 };
     }
 
-    const cache = new KVCache(env.MARKETMIND_CACHE);
-    const rateLimitKey = `ratelimit:ai:${clientId}`;
+    try {
+        const cache = new KVCache(env.MARKETMIND_CACHE);
+        const rateLimitKey = `ratelimit:ai:${clientId}`;
+        const LIMIT = 10;
+        const WINDOW = 3600;
 
-    const LIMIT = 10;
-    const WINDOW = 3600; // 1 hour in seconds
+        const cached = await cache.get<{ count: number; resetAt: number }>(rateLimitKey);
 
-    const cached = await cache.get<{ count: number; resetAt: number }>(rateLimitKey);
+        if (!cached || cached.isStale) {
+            await cache.set(rateLimitKey, { count: 1, resetAt: Date.now() + WINDOW * 1000 }, WINDOW);
+            return { allowed: true, remaining: LIMIT - 1 };
+        }
 
-    if (!cached || cached.isStale) {
-        await cache.set(rateLimitKey, { count: 1, resetAt: Date.now() + WINDOW * 1000 }, WINDOW);
-        return { allowed: true, remaining: LIMIT - 1 };
+        const { count } = cached.data;
+        if (count >= LIMIT) {
+            return { allowed: false, remaining: 0 };
+        }
+
+        await cache.set(rateLimitKey, { count: count + 1, resetAt: cached.data.resetAt }, WINDOW);
+        return { allowed: true, remaining: LIMIT - count - 1 };
+    } catch {
+        console.error('[AI] rate-limit KV failure');
+        throw new AiProviderError(
+            'Unable to enforce AI rate limits right now. Please try again shortly.',
+            'provider',
+            503
+        );
     }
-
-    const { count } = cached.data;
-
-    if (count >= LIMIT) {
-        return { allowed: false, remaining: 0 };
-    }
-
-    await cache.set(rateLimitKey, { count: count + 1, resetAt: cached.data.resetAt }, WINDOW);
-    return { allowed: true, remaining: LIMIT - count - 1 };
 }
 
-async function sha256Hex(value: string): Promise<string> {
+export async function sha256Hex(value: string): Promise<string> {
     const msgBuffer = new TextEncoder().encode(value);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Hash question text for cache keys (never put raw unbounded user text in the key). */
-export async function hashQuestion(question: string): Promise<string> {
-    return sha256Hex(question.toLowerCase().trim());
-}
-
 /**
- * Compact fingerprint of market context so materially different payloads miss cache
- * without embedding unbounded chart/news text in the key.
+ * Deterministic fingerprint of the effective model input + generation settings.
+ * Hashes system/user content so unbounded text is never placed in the KV key.
  */
-export async function hashMarketContext(
-    chartData: PricePoint[],
-    news: NewsArticle[]
+export async function buildInferenceInputHash(
+    config: ResolvedAiConfig,
+    systemPrompt: string,
+    userPrompt: string
 ): Promise<string> {
-    const last = chartData.length > 0 ? chartData[chartData.length - 1] : null;
-    const first = chartData.length > 0 ? chartData[0] : null;
-    const newsIds = news
-        .slice(0, 5)
-        .map(a => a.id || a.url || a.title)
-        .join('|');
-    const material = [
-        String(chartData.length),
-        first?.timestamp ?? '',
-        last?.timestamp ?? '',
-        last?.close != null ? String(last.close) : '',
-        String(news.length),
-        newsIds,
-    ].join('::');
-    const hex = await sha256Hex(material);
-    return hex.slice(0, 16);
+    const material = JSON.stringify({
+        model: config.model,
+        promptVersion: config.promptVersion,
+        maxCompletionTokens: config.maxCompletionTokens,
+        temperature: config.temperature,
+        enableThinking: config.enableThinking,
+        system: systemPrompt,
+        user: userPrompt,
+    });
+    return sha256Hex(material);
 }
 
 export function buildAiCacheKey(parts: {
     cacheNamespace: string;
-    model: string;
-    promptVersion: string;
-    assetType: string;
-    symbol?: string;
-    timeframe: string;
+    inputHash: string;
     hourBucket: number;
-    questionHash: string;
-    contextHash: string;
 }): string {
-    return [
-        parts.cacheNamespace,
-        parts.model,
-        parts.promptVersion,
-        parts.assetType,
-        parts.symbol ?? '',
-        parts.timeframe,
-        String(parts.hourBucket),
-        parts.questionHash,
-        parts.contextHash,
-    ].join(':');
+    return [parts.cacheNamespace, parts.inputHash, String(parts.hourBucket)].join(':');
 }
 
 function jsonError(
@@ -111,6 +97,14 @@ function jsonError(
     });
 }
 
+async function parseJsonBody(request: Request): Promise<unknown> {
+    try {
+        return await request.json();
+    } catch {
+        throw new AiRequestValidationError('Request body must be valid JSON');
+    }
+}
+
 export async function handleAiAnalyzeRequest(
     request: Request,
     env: Env,
@@ -120,115 +114,56 @@ export async function handleAiAnalyzeRequest(
         return jsonError({ error: 'Method not allowed' }, 405, corsHeaders);
     }
 
-    const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
-    const { allowed, remaining } = await checkRateLimit(clientIp, env);
-
-    const rateHeaders = {
-        'X-RateLimit-Limit': '10',
-        'X-RateLimit-Remaining': remaining.toString(),
-    };
-
-    if (!allowed) {
-        return jsonError(
-            {
-                error: 'Rate limit exceeded',
-                message:
-                    'You have reached the maximum number of AI requests (10 per hour). Please try again later.',
-                retryAfter: 3600,
-            },
-            429,
-            corsHeaders,
-            {
-                ...rateHeaders,
-                'X-RateLimit-Remaining': '0',
-                'Retry-After': '3600',
-            }
-        );
-    }
-
+    let remaining = 999;
     try {
-        let config;
+        const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+        const rate = await checkRateLimit(clientIp, env);
+        remaining = rate.remaining;
+
+        const rateHeaders = {
+            'X-RateLimit-Limit': '10',
+            'X-RateLimit-Remaining': remaining.toString(),
+        };
+
+        if (!rate.allowed) {
+            return jsonError(
+                {
+                    error: 'Rate limit exceeded',
+                    message:
+                        'You have reached the maximum number of AI requests (10 per hour). Please try again later.',
+                    retryAfter: 3600,
+                    category: 'throttle',
+                },
+                429,
+                corsHeaders,
+                {
+                    ...rateHeaders,
+                    'X-RateLimit-Remaining': '0',
+                    'Retry-After': '3600',
+                }
+            );
+        }
+
+        let config: ResolvedAiConfig;
         try {
             config = resolveAiConfig(env);
         } catch (error) {
             const message =
-                error instanceof AiConfigError
-                    ? error.message
-                    : 'Invalid AI configuration';
+                error instanceof AiConfigError ? error.message : 'Invalid AI configuration';
             return jsonError(
-                { error: 'AI configuration error', message },
+                { error: 'AI configuration error', message, category: 'config' },
                 500,
                 corsHeaders,
                 rateHeaders
             );
         }
 
-        const body: AiAnalyzeRequest = await request.json();
-        const { assetType, symbol, timeframe, chartData, news, question } = body;
+        const rawBody = await parseJsonBody(request);
+        const { assetType, symbol, timeframe, chartData, news, question } =
+            validateAiAnalyzeRequest(rawBody);
 
-        if (!assetType || !timeframe || !chartData || !news || !question) {
-            return jsonError(
-                { error: 'Missing required fields' },
-                400,
-                corsHeaders,
-                rateHeaders
-            );
-        }
-
-        if (typeof question !== 'string' || !question.trim()) {
-            return jsonError(
-                { error: 'Missing required fields', message: 'question must be a non-empty string' },
-                400,
-                corsHeaders,
-                rateHeaders
-            );
-        }
-
-        if (!Array.isArray(chartData) || !Array.isArray(news)) {
-            return jsonError(
-                {
-                    error: 'Missing required fields',
-                    message: 'chartData and news must be arrays',
-                },
-                400,
-                corsHeaders,
-                rateHeaders
-            );
-        }
-
-        const cache = env.MARKETMIND_CACHE ? new KVCache(env.MARKETMIND_CACHE) : null;
-        const questionHash = await hashQuestion(question);
-        const contextHash = await hashMarketContext(chartData, news);
-        const hourBucket = Math.floor(Date.now() / (1800 * 1000)); // 30-min buckets
-        const cacheKey = buildAiCacheKey({
-            cacheNamespace: config.cacheNamespace,
-            model: config.model,
-            promptVersion: config.promptVersion,
-            assetType,
-            symbol,
-            timeframe,
-            hourBucket,
-            questionHash,
-            contextHash,
-        });
-        const CACHE_TTL = 1800; // 30 minutes
-
-        if (cache) {
-            const cached = await cache.get<string>(cacheKey);
-            if (cached && !cached.isStale) {
-                console.log('[AI] cache=HIT');
-                return new Response(JSON.stringify({ answer: cached.data }), {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Cache-Status': 'HIT',
-                        ...rateHeaders,
-                        ...corsHeaders,
-                    },
-                });
-            }
-        }
-
-        const prompt = buildPrompt({
+        // Build the user prompt once; reuse for cache identity and inference.
+        const userPrompt = buildPrompt({
             assetType,
             symbol,
             timeframe,
@@ -236,22 +171,54 @@ export async function handleAiAnalyzeRequest(
             news,
             question,
         });
+        const systemPrompt = ANALYST_SYSTEM_PROMPT;
+
+        const cache = env.MARKETMIND_CACHE ? new KVCache(env.MARKETMIND_CACHE) : null;
+        const inputHash = await buildInferenceInputHash(config, systemPrompt, userPrompt);
+        const hourBucket = Math.floor(Date.now() / (AI_CACHE_TTL_SECONDS * 1000));
+        const cacheKey = buildAiCacheKey({
+            cacheNamespace: config.cacheNamespace,
+            inputHash,
+            hourBucket,
+        });
+
+        if (cache) {
+            try {
+                const cached = await cache.get<string>(cacheKey);
+                if (cached && !cached.isStale && typeof cached.data === 'string' && cached.data.trim()) {
+                    console.log('[AI] cache=HIT');
+                    return new Response(JSON.stringify({ answer: cached.data }), {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Cache-Status': 'HIT',
+                            ...rateHeaders,
+                            ...corsHeaders,
+                        },
+                    });
+                }
+            } catch {
+                console.error('[AI] cache read failure; continuing with inference');
+            }
+        }
 
         console.log('[AI] cache=MISS model=' + config.model);
         const answer = await analyzeMarketContext(
             { assetType, symbol, timeframe, chartData, news, question },
-            prompt,
+            userPrompt,
             env
         );
 
-        // Only cache successful, non-empty analyst text (never failures/mocks).
         if (cache && answer.trim()) {
-            await cache.set(cacheKey, answer, CACHE_TTL);
-            console.log('[AI] cached TTL=1800s');
+            try {
+                await cache.set(cacheKey, answer, AI_CACHE_TTL_SECONDS);
+                console.log('[AI] cached TTL=1800s');
+            } catch {
+                // Successful inference must still be returned if answer caching fails.
+                console.error('[AI] cache write failure; returning uncached answer');
+            }
         }
 
         const response: AiAnalyzeResponse = { answer };
-
         return new Response(JSON.stringify(response), {
             headers: {
                 'Content-Type': 'application/json',
@@ -261,14 +228,28 @@ export async function handleAiAnalyzeRequest(
             },
         });
     } catch (error) {
-        console.error('[AI] error category=', error instanceof AiProviderError ? error.category : 'unknown');
+        const rateHeaders = {
+            'X-RateLimit-Limit': '10',
+            'X-RateLimit-Remaining': remaining.toString(),
+        };
+
+        if (error instanceof AiRequestValidationError) {
+            return jsonError(
+                { error: 'Invalid request', message: error.message },
+                400,
+                corsHeaders,
+                rateHeaders
+            );
+        }
 
         if (error instanceof AiProviderError) {
+            console.error(`[AI] error category=${error.category}`);
             return jsonError(
                 {
                     error: 'Failed to analyze market data',
                     message: error.message,
                     category: error.category,
+                    ...(error.providerCode != null ? { providerCode: error.providerCode } : {}),
                 },
                 error.statusHint,
                 corsHeaders,
@@ -278,17 +259,19 @@ export async function handleAiAnalyzeRequest(
 
         if (error instanceof AiConfigError) {
             return jsonError(
-                { error: 'AI configuration error', message: error.message },
+                { error: 'AI configuration error', message: error.message, category: 'config' },
                 500,
                 corsHeaders,
                 rateHeaders
             );
         }
 
+        console.error('[AI] unexpected error');
         return jsonError(
             {
                 error: 'Failed to analyze market data',
-                message: error instanceof Error ? error.message : 'Unknown error',
+                message: 'An unexpected error occurred while analyzing market data.',
+                category: 'provider',
             },
             500,
             corsHeaders,

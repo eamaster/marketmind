@@ -1,68 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle, Info } from 'lucide-react';
-
-interface ApiUsage {
-    twelvedata: number;
-    marketaux: number;
-    goldApi: number;
-    lastReset: {
-        daily: string; // ISO timestamp
-        monthly: string; // ISO timestamp
-    };
-}
-
-const API_LIMITS = {
-    MARKETAUX_DAILY: 100,
-    GOLD_API_MONTHLY: 1000,
-    WARNING_THRESHOLD: 0.8, // 80%
-    DANGER_THRESHOLD: 0.9, // 90%
-};
-
-function getStoredUsage(): ApiUsage {
-    const stored = localStorage.getItem('api_usage');
-    if (stored) {
-        return JSON.parse(stored);
-    }
-    return {
-        twelvedata: 0,
-        marketaux: 0,
-        goldApi: 0,
-        lastReset: {
-            daily: new Date().toISOString(),
-            monthly: new Date().toISOString(),
-        },
-    };
-}
-
-function saveUsage(usage: ApiUsage) {
-    localStorage.setItem('api_usage', JSON.stringify(usage));
-}
-
-function getUsageWithResets(): ApiUsage {
-    const now = new Date();
-    const usage = getStoredUsage();
-    const lastDailyReset = new Date(usage.lastReset.daily);
-    const lastMonthlyReset = new Date(usage.lastReset.monthly);
-    let updated = false;
-    const next = { ...usage, lastReset: { ...usage.lastReset } };
-
-    if (now.getDate() !== lastDailyReset.getDate()) {
-        next.marketaux = 0;
-        next.lastReset.daily = now.toISOString();
-        updated = true;
-    }
-
-    if (now.getMonth() !== lastMonthlyReset.getMonth()) {
-        next.goldApi = 0;
-        next.lastReset.monthly = now.toISOString();
-        updated = true;
-    }
-
-    if (updated) {
-        saveUsage(next);
-    }
-    return next;
-}
+import { API_LIMITS, getUsageWithResets, type ApiUsage } from '../../services/apiUsage';
 
 export function ApiStatusIndicator() {
     const [usage] = useState<ApiUsage>(() => getUsageWithResets());

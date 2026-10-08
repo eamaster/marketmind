@@ -304,8 +304,8 @@ export async function getCoinGeckoCryptoQuote(
     env: Env
 ): Promise<{ price: number; change: number; changePercent: number }> {
     try {
-        // Use 7 days (timeframe '1D') for quote calculation
-        const { data: candles } = await getCoinGeckoCryptoCandles(symbol, '1D', env);
+        // Short window for quote calculation (supported Timeframe)
+        const { data: candles } = await getCoinGeckoCryptoCandles(symbol, '7D', env);
 
         if (candles.length < 2) {
             const last = candles[candles.length - 1];

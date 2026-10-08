@@ -13,19 +13,40 @@ const API_BASE_URL = import.meta.env.DEV
     ? '/api'
     : 'https://marketmind-worker.smah0085.workers.dev/api';
 
+export type ApiErrorCategory =
+    | 'config'
+    | 'provider'
+    | 'quota'
+    | 'throttle'
+    | 'capacity'
+    | 'invalid_output'
+    | 'timeout'
+    | string;
+
 class ApiError extends Error {
     status: number;
     statusText: string;
+    category?: ApiErrorCategory;
+    errorCode?: string;
+    providerCode?: number;
 
     constructor(
         message: string,
         status: number,
-        statusText: string
+        statusText: string,
+        extras: {
+            category?: ApiErrorCategory;
+            errorCode?: string;
+            providerCode?: number;
+        } = {}
     ) {
         super(message);
         this.name = 'ApiError';
         this.status = status;
         this.statusText = statusText;
+        this.category = extras.category;
+        this.errorCode = extras.errorCode;
+        this.providerCode = extras.providerCode;
     }
 }
 
@@ -46,10 +67,22 @@ async function fetchApi<T>(
 
         if (!response.ok) {
             let errorMessage = response.statusText;
+            let category: ApiErrorCategory | undefined;
+            let errorCode: string | undefined;
+            let providerCode: number | undefined;
             try {
                 const errorBody = await response.json();
                 if (errorBody.message) {
                     errorMessage = errorBody.message;
+                }
+                if (typeof errorBody.error === 'string') {
+                    errorCode = errorBody.error;
+                }
+                if (typeof errorBody.category === 'string') {
+                    category = errorBody.category;
+                }
+                if (typeof errorBody.providerCode === 'number') {
+                    providerCode = errorBody.providerCode;
                 }
             } catch {
                 // Ignore JSON parse error, stick with statusText
@@ -58,7 +91,8 @@ async function fetchApi<T>(
             throw new ApiError(
                 `API request failed: ${errorMessage}`,
                 response.status,
-                response.statusText
+                response.statusText,
+                { category, errorCode, providerCode }
             );
         }
 
