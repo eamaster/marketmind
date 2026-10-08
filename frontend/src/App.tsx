@@ -8,7 +8,7 @@ import { MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useNews } from './hooks/useNews';
 import { useAiAnalyst } from './hooks/useAiAnalyst';
-import type { Timeframe } from './services/types';
+import type { NewsArticle, PricePoint, Timeframe } from './services/types';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,8 +32,8 @@ function AppContent() {
     assetType: 'stock' | 'crypto' | 'metal';
     symbol: string;
     timeframe: Timeframe;
-    chartData: any[];
-    news: any[];
+    chartData: PricePoint[];
+    news: NewsArticle[];
   }>({
     assetType: activeAsset, // Dynamic based on active asset
     symbol: activeAsset === 'stock' ? 'AAPL' : activeAsset === 'crypto' ? 'BTC' : 'XAU',

@@ -1,4 +1,4 @@
-import { useState, type ReactNode, cloneElement, isValidElement } from 'react';
+import { useState, type ReactElement, type ReactNode, cloneElement, isValidElement } from 'react';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 
@@ -6,6 +6,11 @@ interface MainLayoutProps {
     children: ReactNode;
     sidebar?: ReactNode;
     bottomBar?: ReactNode;
+}
+
+interface SidebarInjectedProps {
+    isOpen?: boolean;
+    onClose?: () => void;
 }
 
 export function MainLayout({
@@ -17,7 +22,7 @@ export function MainLayout({
 
     // Clone sidebar to inject props if it's a valid element
     const sidebarWithProps = isValidElement(sidebar)
-        ? cloneElement(sidebar as any, {
+        ? cloneElement(sidebar as ReactElement<SidebarInjectedProps>, {
             isOpen: isMobileSidebarOpen,
             onClose: () => setIsMobileSidebarOpen(false),
         })

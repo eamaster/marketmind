@@ -10,14 +10,16 @@ export function PriceAnimated({ value, className = '', prefix = '$' }: PriceAnim
     const [displayValue, setDisplayValue] = useState(value);
     const [flash, setFlash] = useState(false);
 
+    if (value !== displayValue) {
+        setDisplayValue(value);
+        setFlash(true);
+    }
+
     useEffect(() => {
-        if (value !== displayValue) {
-            setFlash(true);
-            setDisplayValue(value);
-            const timeout = setTimeout(() => setFlash(false), 300);
-            return () => clearTimeout(timeout);
-        }
-    }, [value, displayValue]);
+        if (!flash) return;
+        const timeout = setTimeout(() => setFlash(false), 300);
+        return () => clearTimeout(timeout);
+    }, [flash]);
 
     return (
         <span

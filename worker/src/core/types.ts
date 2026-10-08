@@ -29,15 +29,20 @@ export type Timeframe = '7D' | '1M' | '3M' | '6M' | '1Y';
 
 // Environment bindings interface
 export interface Env {
+    /** Native Workers AI binding (wrangler `[ai] binding = "AI"`). */
+    AI?: Ai;
     FINNHUB_API_KEY?: string;
     MASSIVE_API_KEY?: string;
     TWELVE_DATA_API_KEY?: string;
     MARKETMIND_CACHE?: KVNamespace;
     MARKETAUX_API_TOKEN?: string;
     GOLD_API_KEY?: string;
-    GEMINI_API_KEY?: string;
     COINGECKO_API_KEY?: string;
     WORKER_ENV?: string;
+    /** Optional overrides validated in core/aiConfig.ts */
+    AI_MODEL?: string;
+    AI_MAX_COMPLETION_TOKENS?: string;
+    AI_TEMPERATURE?: string;
 }
 
 // API Request/Response types

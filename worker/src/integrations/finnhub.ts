@@ -105,7 +105,8 @@ function getTimeframeParams(timeframe: Timeframe): { resolution: string; from: n
     const now = Math.floor(Date.now() / 1000); // Current time in seconds
     const oneDay = 24 * 60 * 60;
 
-    switch (timeframe) {
+    // Routes may still pass legacy aliases (1D/1W) cast as Timeframe.
+    switch (timeframe as string) {
         case '1D':
             return {
                 resolution: 'D',
@@ -113,6 +114,7 @@ function getTimeframeParams(timeframe: Timeframe): { resolution: string; from: n
                 to: now,
             };
         case '1W':
+        case '7D':
             return {
                 resolution: 'D',
                 from: now - (8 * oneDay), // Get 8 days to ensure 7 trading days

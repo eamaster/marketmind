@@ -76,7 +76,7 @@ export function AiChatPanel({
                             🤖 AI Analyst
                         </h2>
                         <p className="text-xs text-blue-100 mt-0.5">
-                            Powered by Gemini
+                            Powered by Cloudflare Workers AI
                         </p>
                     </div>
 

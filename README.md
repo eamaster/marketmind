@@ -14,7 +14,7 @@ Real-time financial market analysis dashboard powered by Cloudflare Workers and 
   - Progress bar shows sentiment strength (-1.0 to +1.0)
   - Based on Marketaux news sentiment scoring
 - **Market News**: Financial news with AI-powered sentiment analysis
-- **AI Analysis**: Google Gemini AI-powered market insights
+- **AI Analysis**: Cloudflare Workers AI market insights
   - **Clear Chat**: Delete conversation history with custom confirmation modal
   - **Context Awareness**: AI knows which asset/timeframe you're viewing
   - **Suggested Questions**: Quick-start prompts for common queries
@@ -78,7 +78,7 @@ done
   - Cache: **1 hour TTL** (sentiment changes slowly)
   - Provides sentiment scores from -1.0 (bearish) to +1.0 (bullish)
 - **Gold API**: Precious metal prices
-- **Google Gemini**: AI market analysis
+- **Cloudflare Workers AI**: AI market analysis (native Worker binding; default model configured server-side)
 
 ---
 
@@ -94,7 +94,7 @@ done
   - [CoinGecko](https://www.coingecko.com/en/api/pricing) (free tier)
   - [Marketaux](https://www.marketaux.com/)
   - [Gold API](https://www.goldapi.io/)
-  - [Google Gemini](https://makersuite.google.com/app/apikey)
+  - Cloudflare account with Workers AI enabled (native binding; no external LLM API key)
 
 ### Setup
 
@@ -122,11 +122,14 @@ wrangler secret put TWELVE_DATA_API_KEY
 wrangler secret put COINGECKO_API_KEY
 wrangler secret put MARKETAUX_API_TOKEN
 wrangler secret put GOLD_API_KEY
-wrangler secret put GEMINI_API_KEY
 
 # Create KV namespace
 wrangler kv namespace create MARKETMIND_CACHE
 # Copy the ID to wrangler.toml
+
+# Workers AI: ensure `[ai] binding = "AI"` is present in wrangler.toml
+# Model / token budget / temperature are set in wrangler.toml [vars]
+# and validated in worker/src/core/aiConfig.ts (defaults: @cf/zai-org/glm-4.7-flash).
 
 # Deploy
 wrangler deploy
@@ -195,7 +198,11 @@ wrangler secret put TWELVE_DATA_API_KEY
 wrangler secret put COINGECKO_API_KEY
 wrangler secret put MARKETAUX_API_TOKEN
 wrangler secret put GOLD_API_KEY
-wrangler secret put GEMINI_API_KEY
+```
+
+Optional cleanup if an old Gemini secret remains in the dashboard (not used by this Worker):
+```bash
+wrangler secret delete GEMINI_API_KEY
 ```
 
 **Deploy Worker:**
@@ -205,7 +212,15 @@ npm run deploy
 wrangler deploy
 ```
 
-**Deployed at:** `https://your-worker-name.workers.dev` (update in `frontend/src/services/api.ts`)
+**Deployed at:** `https://your-worker-name.workers.dev` (update in `frontend/src/services/apiClient.ts`)
+
+**Workers AI notes:**
+- Binding: `[ai] binding = "AI"` in `worker/wrangler.toml`
+- Config: `AI_MODEL`, `AI_MAX_COMPLETION_TOKENS`, `AI_TEMPERATURE` in `[vars]` (see `worker/src/core/aiConfig.ts`)
+- Free allocation: shared **10,000 Neurons/day** across the Cloudflare account; overage requires Workers Paid ([pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/))
+- Local: `cd worker && npm run dev` (AI binding uses remote account inference; KV uses `preview_id` in `wrangler.toml`)
+- Unit tests mock the binding: `cd worker && npm test`
+- If local routes return 404 with “Could not create remote preview session”, authenticate Wrangler (`wrangler login`) and ensure the account can create Workers preview sessions; provider shape can still be checked via the Workers AI REST `/ai/run` API.
 
 ---
 
@@ -213,11 +228,16 @@ wrangler deploy
 
 ### Type Checking
 ```bash
-# Frontend
-cd frontend && npm run type-check
+# Frontend (tsc via build project references)
+cd frontend && npx tsc -b --pretty false
 
 # Worker
 cd worker && npm run type-check
+```
+
+### Worker unit tests (mocked Workers AI binding)
+```bash
+cd worker && npm test
 ```
 
 ### Build Verification
@@ -227,12 +247,21 @@ cd frontend && npm run build
 
 # Test production build locally
 npm run preview
+
+# Worker deploy dry-run (requires Wrangler auth for some checks)
+cd worker && npx wrangler deploy --dry-run
 ```
 
 ### Linting
 ```bash
 cd frontend && npm run lint
 ```
+
+### Rollback (AI provider)
+1. Revert the Worker commit that introduced Workers AI, or restore `worker/src/integrations/gemini.ts` from git history and point `aiAnalyze.ts` back at it.
+2. Redeploy the Worker: `cd worker && wrangler deploy`
+3. Re-add `GEMINI_API_KEY` only if rolling back to Gemini: `wrangler secret put GEMINI_API_KEY`
+4. Frontend label strings are cosmetic; redeploy GitHub Pages if attribution must match.
 
 ---
 
@@ -284,11 +313,13 @@ MarketMind uses a hybrid approach to provide the best free-tier experience:
 - **Documentation:** [https://www.marketaux.com/documentation](https://www.marketaux.com/documentation)
 - **Caching**: 10 minutes
 
-### Google Gemini API
-- **Endpoint**: AI-powered market analysis
-- **Free Tier**: 60 requests/minute  
-- **Documentation:** [https://ai.google.dev/gemini-api/docs](https://ai.google.dev/gemini-api/docs)
-- **Caching**: None (real-time responses)
+### Cloudflare Workers AI
+- **Endpoint**: `POST /api/ai/analyze` (Worker route; model invoked via `env.AI.run`)
+- **Default model**: `@cf/zai-org/glm-4.7-flash` (operator-configurable; not client-selectable)
+- **Free allocation**: 10,000 Neurons/day (account-wide, not unlimited)
+- **Documentation:** [Workers AI](https://developers.cloudflare.com/workers-ai/) / [GLM-4.7-Flash](https://developers.cloudflare.com/workers-ai/models/glm-4.7-flash/)
+- **Caching**: Successful answers cached in KV for 30 minutes (namespace `ai:wai:v2`; key hashes system+user prompt + verified model + generation settings + prompt version)
+- **Allowed model**: `@cf/zai-org/glm-4.7-flash` only (validated in `worker/src/core/aiConfig.ts`)
 
 ---
 

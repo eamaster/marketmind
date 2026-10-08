@@ -167,7 +167,7 @@ export async function getGoldQuote(
     env: Env
 ): Promise<{ price: number; change: number; changePercent: number }> {
     try {
-        const data = await getGoldPrice(symbol, '1D', env);
+        const data = await getGoldPrice(symbol, '7D', env);
 
         if (data.length < 2) {
             throw new Error('Insufficient data for quote calculation');
